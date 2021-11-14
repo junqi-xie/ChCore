@@ -26,6 +26,21 @@ extern unsigned long *img_end;
 
 #define PHYSICAL_MEM_END (PHYSICAL_MEM_START+NPAGES*BUDDY_PAGE_SIZE)
 
+#define IS_VALID (1UL << 0)
+#define IS_TABLE (1UL << 1)
+
+#define UXN	       (0x1UL << 54)
+#define ACCESSED       (0x1UL << 10)
+#define INNER_SHARABLE (0x3UL << 8)
+#define NORMAL_MEMORY  (0x4UL << 2)
+#define DEVICE_MEMORY  (0x0UL << 2)
+
+#define SIZE_2M  (2UL*1024*1024)
+
+#define GET_L0_INDEX(x) (((x) >> (12 + 9 + 9 + 9)) & 0x1ff)
+#define GET_L1_INDEX(x) (((x) >> (12 + 9 + 9)) & 0x1ff)
+#define GET_L2_INDEX(x) (((x) >> (12 + 9)) & 0x1ff)
+
 /*
  * Layout:
  *
@@ -50,9 +65,24 @@ unsigned long get_ttbr1(void)
  */
 void map_kernel_space(vaddr_t va, paddr_t pa, size_t len)
 {
-	// <lab2>
+	vaddr_t *ttbr1_l0 = (vaddr_t *)phys_to_virt(get_ttbr1());
 
-	// </lab2>
+	for (size_t i = 0; i < DIV_ROUND_UP(len, SIZE_2M); ++i) {
+		vaddr_t *ttbr1_l1 = (vaddr_t *)phys_to_virt(ttbr1_l0[GET_L0_INDEX(va)]
+			& ~IS_TABLE & ~IS_VALID);
+		vaddr_t *ttbr1_l2 = (vaddr_t *)phys_to_virt(ttbr1_l1[GET_L1_INDEX(va)]
+			& ~IS_TABLE & ~IS_VALID);
+		
+		ttbr1_l2[GET_L2_INDEX(va)] = pa
+		    | UXN	/* Unprivileged execute never */
+		    | ACCESSED	/* Set access flag */
+		    | INNER_SHARABLE	/* Sharebility */
+		    | NORMAL_MEMORY	/* Normal memory */
+		    | IS_VALID;
+		
+		va += SIZE_2M;
+		pa += SIZE_2M;
+	}
 }
 
 void kernel_space_check(void)

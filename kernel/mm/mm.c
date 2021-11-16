@@ -50,9 +50,8 @@ unsigned long get_ttbr1(void)
  */
 void map_kernel_space(vaddr_t va, paddr_t pa, size_t len)
 {
-	// <lab2>
-
-	// </lab2>
+	vaddr_t *pgtbl = (vaddr_t *)phys_to_virt(get_ttbr1());
+	map_range_in_pgtbl_hugepage(pgtbl, va, pa, len, KERNEL_PT);
 }
 
 void kernel_space_check(void)

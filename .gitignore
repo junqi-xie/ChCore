@@ -51,6 +51,19 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# CMake files
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
 # ChCore Build Results
 *.img
 *.bin
@@ -58,3 +71,4 @@ asm/
 tags/
 build/
 chcore.out
+__pycache__

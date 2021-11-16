@@ -240,7 +240,11 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 				new_pte_val.l3_page.is_page = 1;
 				new_pte_val.l3_page.pfn
 					= pa >> PAGE_SHIFT;
-				set_pte_flags(&new_pte_val, flags, USER_PTE);
+				if (flags == KERNEL_PT) {
+					set_pte_flags(&new_pte_val, flags, KERNEL_PTE);
+				} else {
+					set_pte_flags(&new_pte_val, flags, USER_PTE);
+				}
 
 				/* same effect as: cur_ptp->ent[index] = new_pte_val; */
 				entry->pte = new_pte_val.pte;
@@ -281,7 +285,7 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
 		pte_t *pte = NULL;
 		int ret = 0;
 
-		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, true)) >= 0) {
+		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, false)) >= 0) {
 			if (level < 3 && ret == NORMAL_PTP) {
 				cur_ptp = next_ptp;
 				++level;
@@ -307,4 +311,112 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
 	return 0;
 }
 
-// TODO: add hugepage support for user space.
+// add hugepage support
+
+static int set_pte_flags_hugepage(pte_t * entry, vmr_prop_t flags, int kind)
+{
+	if (flags & VMR_WRITE)
+		entry->l2_block.AP = AARCH64_PTE_AP_HIGH_RW_EL0_RW;
+	else
+		entry->l2_block.AP = AARCH64_PTE_AP_HIGH_RO_EL0_RO;
+
+	if (flags & VMR_EXEC)
+		entry->l2_block.UXN = AARCH64_PTE_UX;
+	else
+		entry->l2_block.UXN = AARCH64_PTE_UXN;
+
+	// EL1 cannot directly execute EL0 accessiable region.
+	if (kind == USER_PTE)
+		entry->l2_block.PXN = AARCH64_PTE_PXN;
+	entry->l2_block.AF = AARCH64_PTE_AF_ACCESSED;
+
+	// inner sharable
+	entry->l2_block.SH = INNER_SHAREABLE;
+	// memory type
+	entry->l2_block.attr_index = NORMAL_MEMORY;
+
+	return 0;
+}
+
+int map_range_in_pgtbl_hugepage(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
+		       size_t len, vmr_prop_t flags)
+{
+	for (size_t i = 0; i < DIV_ROUND_UP(len, SIZE_2M); ++i) {
+		ptp_t *cur_ptp = (ptp_t *)pgtbl;
+		u32 level = 0;
+		ptp_t *next_ptp = NULL;
+		pte_t *pte = NULL;
+		int ret = 0;
+
+		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, true)) >= 0) {
+			if (level < 2 && ret == NORMAL_PTP) {
+				cur_ptp = next_ptp;
+				++level;
+			} else {
+				u32 index = GET_L2_INDEX(va);
+				pte_t *entry = &(cur_ptp->ent[index]);
+				pte_t new_pte_val;
+
+				/* map the new page table entry to physical page */
+				new_pte_val.pte = 0;
+				new_pte_val.l2_block.is_valid = 1;
+				new_pte_val.l2_block.is_table = 0;
+				new_pte_val.l2_block.pfn
+					= pa >> BLOCK_SHIFT;
+				if (flags == KERNEL_PT) {
+					set_pte_flags_hugepage(&new_pte_val, flags, KERNEL_PTE);
+				} else {
+					set_pte_flags_hugepage(&new_pte_val, flags, USER_PTE);
+				}
+
+				/* same effect as: cur_ptp->ent[index] = new_pte_val; */
+				entry->pte = new_pte_val.pte;
+				break;
+			}
+		}
+		if (ret < 0) {
+			return ret;
+		}
+
+		va += SIZE_2M;
+		pa += SIZE_2M;
+	}
+
+	flush_tlb();
+	return 0;
+}
+
+int unmap_range_in_pgtbl_hugepage(vaddr_t * pgtbl, vaddr_t va, size_t len)
+{
+	for (size_t i = 0; i < DIV_ROUND_UP(len, SIZE_2M); ++i) {
+		ptp_t *cur_ptp = (ptp_t *)pgtbl;
+		u32 level = 0;
+		ptp_t *next_ptp = NULL;
+		pte_t *pte = NULL;
+		int ret = 0;
+
+		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, false)) >= 0) {
+			if (level < 2 && ret == NORMAL_PTP) {
+				cur_ptp = next_ptp;
+				++level;
+			} else {
+				u32 index = GET_L2_INDEX(va);
+				pte_t *entry = &(cur_ptp->ent[index]);
+				pte_t new_pte_val;
+				new_pte_val.pte = 0;
+
+				/* same effect as: cur_ptp->ent[index] = new_pte_val; */
+				entry->pte = new_pte_val.pte;
+				break;
+			}
+		}
+		if (ret < 0) {
+			return ret;
+		}
+
+		va += SIZE_2M;
+	}
+
+	flush_tlb();
+	return 0;
+}

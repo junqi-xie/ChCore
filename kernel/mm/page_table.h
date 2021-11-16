@@ -45,6 +45,11 @@
 #define PAGE_MASK                           (PAGE_SIZE - 1)
 #define PAGE_ORDER                          (9)
 
+/* SIZE_2M (2M) == (1 << (BLOCK_SHIFT)) */
+#define BLOCK_SHIFT                         (21)
+#define BLOCK_MASK                          (SIZE_2M - 1)
+#define BLOCK_ORDER                         (18)
+
 #define PTP_INDEX_MASK			    ((1 << (PAGE_ORDER)) - 1)
 #define L0_INDEX_SHIFT			    ((3 * PAGE_ORDER) + PAGE_SHIFT)
 #define L1_INDEX_SHIFT			    ((2 * PAGE_ORDER) + PAGE_SHIFT)

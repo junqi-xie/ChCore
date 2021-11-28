@@ -226,12 +226,12 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 		int ret = 0;
 
 		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, true)) >= 0) {
-			if (level < 3 && ret == NORMAL_PTP) {
+			if (level < 2 && ret == NORMAL_PTP) {
 				cur_ptp = next_ptp;
 				++level;
 			} else {
 				u32 index = GET_L3_INDEX(va);
-				pte_t *entry = &(cur_ptp->ent[index]);
+				pte_t *entry = &(next_ptp->ent[index]);
 				pte_t new_pte_val;
 
 				/* map the new page table entry to physical page */
@@ -246,7 +246,7 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 					set_pte_flags(&new_pte_val, flags, USER_PTE);
 				}
 
-				/* same effect as: cur_ptp->ent[index] = new_pte_val; */
+				/* same effect as: next_ptp->ent[index] = new_pte_val; */
 				entry->pte = new_pte_val.pte;
 				break;
 			}
@@ -286,16 +286,16 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
 		int ret = 0;
 
 		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, false)) >= 0) {
-			if (level < 3 && ret == NORMAL_PTP) {
+			if (level < 2 && ret == NORMAL_PTP) {
 				cur_ptp = next_ptp;
 				++level;
 			} else {
 				u32 index = GET_L3_INDEX(va);
-				pte_t *entry = &(cur_ptp->ent[index]);
+				pte_t *entry = &(next_ptp->ent[index]);
 				pte_t new_pte_val;
 				new_pte_val.pte = 0;
 
-				/* same effect as: cur_ptp->ent[index] = new_pte_val; */
+				/* same effect as: next_ptp->ent[index] = new_pte_val; */
 				entry->pte = new_pte_val.pte;
 				break;
 			}
@@ -349,12 +349,12 @@ int map_range_in_pgtbl_hugepage(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 		int ret = 0;
 
 		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, true)) >= 0) {
-			if (level < 2 && ret == NORMAL_PTP) {
+			if (level < 1 && ret == NORMAL_PTP) {
 				cur_ptp = next_ptp;
 				++level;
 			} else {
 				u32 index = GET_L2_INDEX(va);
-				pte_t *entry = &(cur_ptp->ent[index]);
+				pte_t *entry = &(next_ptp->ent[index]);
 				pte_t new_pte_val;
 
 				/* map the new page table entry to physical page */
@@ -369,7 +369,7 @@ int map_range_in_pgtbl_hugepage(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 					set_pte_flags_hugepage(&new_pte_val, flags, USER_PTE);
 				}
 
-				/* same effect as: cur_ptp->ent[index] = new_pte_val; */
+				/* same effect as: next_ptp->ent[index] = new_pte_val; */
 				entry->pte = new_pte_val.pte;
 				break;
 			}
@@ -396,16 +396,16 @@ int unmap_range_in_pgtbl_hugepage(vaddr_t * pgtbl, vaddr_t va, size_t len)
 		int ret = 0;
 
 		while ((ret = get_next_ptp(cur_ptp, level, va, &next_ptp, &pte, false)) >= 0) {
-			if (level < 2 && ret == NORMAL_PTP) {
+			if (level < 1 && ret == NORMAL_PTP) {
 				cur_ptp = next_ptp;
 				++level;
 			} else {
 				u32 index = GET_L2_INDEX(va);
-				pte_t *entry = &(cur_ptp->ent[index]);
+				pte_t *entry = &(next_ptp->ent[index]);
 				pte_t new_pte_val;
 				new_pte_val.pte = 0;
 
-				/* same effect as: cur_ptp->ent[index] = new_pte_val; */
+				/* same effect as: next_ptp->ent[index] = new_pte_val; */
 				entry->pte = new_pte_val.pte;
 				break;
 			}

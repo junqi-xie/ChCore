@@ -26,19 +26,6 @@ extern unsigned long *img_end;
 
 #define PHYSICAL_MEM_END (PHYSICAL_MEM_START+NPAGES*BUDDY_PAGE_SIZE)
 
-#define IS_VALID (1UL << 0)
-#define IS_TABLE (1UL << 1)
-
-#define UXN	       (0x1UL << 54)
-#define ACCESSED       (0x1UL << 10)
-#define INNER_SHARABLE (0x3UL << 8)
-#define NORMAL_MEMORY  (0x4UL << 2)
-#define DEVICE_MEMORY  (0x0UL << 2)
-
-#define GET_L0_INDEX(x) (((x) >> (12 + 9 + 9 + 9)) & 0x1ff)
-#define GET_L1_INDEX(x) (((x) >> (12 + 9 + 9)) & 0x1ff)
-#define GET_L2_INDEX(x) (((x) >> (12 + 9)) & 0x1ff)
-
 /*
  * Layout:
  *
@@ -110,5 +97,5 @@ void mm_init(void)
 
 	map_kernel_space(KBASE + (128UL << 21), 128UL << 21, 128UL << 21);
 	//check whether kernel space [KABSE + 256 : KBASE + 512] is mapped 
-	kernel_space_check();
+	// kernel_space_check();
 }

@@ -122,7 +122,6 @@
  */
 
 /*
- * Lab3: Your code here
  * Use exception_entry to fill the exception vector table to redirect
  * every entry to cooresponeding entry.
  * NOTE: el1t means SP_EL0 is used as stack before exception and el1h
@@ -130,6 +129,23 @@
  */
 .align	11
 EXPORT(el1_vector)
+
+exception_entry sync_el1t
+exception_entry irq_el1t
+exception_entry fiq_el1t
+exception_entry error_el1t
+exception_entry sync_el1h
+exception_entry irq_el1h
+exception_entry fiq_el1h
+exception_entry error_el1h
+exception_entry sync_el0_64
+exception_entry irq_el0_64
+exception_entry fiq_el0_64
+exception_entry error_el0_64
+exception_entry sync_el0_32
+exception_entry irq_el0_32
+exception_entry fiq_el0_32
+exception_entry error_el0_32
 
 sync_el1t:
 	handle_entry	1, SYNC_EL1t

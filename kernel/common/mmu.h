@@ -23,6 +23,11 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 		       size_t len, vmr_prop_t flags);
 int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len);
 
+// add hugepage support
+int map_range_in_pgtbl_hugepage(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
+		       size_t len, vmr_prop_t flags);
+int unmap_range_in_pgtbl_hugepage(vaddr_t * pgtbl, vaddr_t va, size_t len);
+
 #ifndef KBASE
 #define KBASE 0xFFFFFF0000000000
 #endif

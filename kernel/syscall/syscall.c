@@ -28,9 +28,9 @@ void sys_debug(long arg)
 void sys_putc(char ch)
 {
 	/*
-	 * Lab3: Your code here
 	 * Send ch to the screen in anyway as your like
 	 */
+	uart_send(ch);
 }
 
 u32 sys_getc(void)
@@ -48,12 +48,16 @@ u32 sys_get_cpu_id(void)
 }
 
 /*
- * Lab3: Your code here
  * Update the syscall table as you like to redirect syscalls
  * to functions accordingly
  */
 const void *syscall_table[NR_SYSCALL] = {
 	[0 ... NR_SYSCALL - 1] = sys_debug,
+	[SYS_putc] = sys_putc,
+	[SYS_exit] = sys_exit,
+	[SYS_create_pmo] = sys_create_pmo,
+	[SYS_map_pmo] = sys_map_pmo,
+	[SYS_handle_brk] = sys_handle_brk,
 	/* lab3 syscalls finished */
 
 	[SYS_getc] = sys_getc,

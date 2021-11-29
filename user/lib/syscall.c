@@ -78,7 +78,7 @@ s32 usys_get_affinity(u64 thread_cap)
 }
 
 /*
- * Lab4
+ * Lab4: Your code here
  * Add syscall
  */
 

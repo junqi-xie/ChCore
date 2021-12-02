@@ -134,11 +134,12 @@ u64 switch_context(void)
 /* SYSCALL functions */
 
 /**
- * Lab4: Your code here 
  * Finish the sys_yield function
  */
 void sys_yield(void)
 {
+	sched();
+	eret_to_thread(switch_context());
 }
 
 int sched_init(struct sched_ops *sched_ops)

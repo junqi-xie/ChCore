@@ -42,7 +42,6 @@ struct list_head rr_ready_queue[PLAT_CPU_NUM];
 struct thread idle_threads[PLAT_CPU_NUM];
 
 /*
- * Lab4: Your code here
  * Sched_enqueue
  * Put `thread` at the end of ready queue of assigned `affinity`.
  * If affinity = NO_AFF, assign the core to the current cpu.
@@ -51,23 +50,40 @@ struct thread idle_threads[PLAT_CPU_NUM];
  */
 int rr_sched_enqueue(struct thread *thread)
 {
-	return -1;
+	if (!thread || !thread->thread_ctx ||
+		thread->thread_ctx->state == TS_READY) {
+		return -1;
+	}
+
+	u32 cpuid = smp_get_cpu_id();
+	if (thread->thread_ctx->type != TYPE_IDLE) {
+		list_append(&thread->ready_queue_node, &rr_ready_queue[cpuid]);
+		thread->thread_ctx->cpuid = cpuid;
+		thread->thread_ctx->state = TS_READY;
+	}
+	return 0;
 }
 
 /*
- * Lab4: Your code here
  * Sched_dequeue
  * remove `thread` from its current residual ready queue
  * Do not forget to add some basic parameter checking
  */
 int rr_sched_dequeue(struct thread *thread)
 {
-	return -1;
+	if (!thread || !thread->thread_ctx ||
+		thread->thread_ctx->state != TS_READY) {
+		return -1;
+	}
+
+	if (thread->thread_ctx->type != TYPE_IDLE) {
+		list_del(&thread->ready_queue_node);
+		thread->thread_ctx->state = TS_INTER;
+	}
+	return 0;
 }
 
 /*
- * Lab4: Your code here
- * The helper function
  * Choose an appropriate thread and dequeue from ready queue
  * 
  * If there is no ready thread in the current CPU's ready queue, 
@@ -77,7 +93,15 @@ int rr_sched_dequeue(struct thread *thread)
  */
 struct thread *rr_sched_choose_thread(void)
 {
-	return NULL;
+	u32 cpuid = smp_get_cpu_id();
+	if (list_empty(&rr_ready_queue[cpuid])) {
+		return &idle_threads[cpuid];
+	}
+
+	struct thread *target = list_entry(
+		rr_ready_queue[cpuid].next, struct thread, ready_queue_node);
+	rr_sched_dequeue(target);
+	return target;
 }
 
 static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
@@ -85,7 +109,6 @@ static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
 }
 
 /*
- * Lab4: Your code here
  * Schedule a thread to execute.
  * This function will suspend current running thread, if any, and schedule
  * another thread from `rr_ready_queue[cpu_id]`.
@@ -98,7 +121,10 @@ static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
  */
 int rr_sched(void)
 {
-	return -1;
+	rr_sched_enqueue(current_thread);
+	struct thread *target = rr_sched_choose_thread();
+	switch_to_thread(target);
+	return 0;
 }
 
 /*

@@ -87,43 +87,42 @@ void unlock(struct lock *lock)
 	asm volatile ("dmb ish");
 
 	/**
-	 * Lab4: Your code here 
 	 * Unlock the ticket lock here
 	 * Your code should be no more than 5 lines
 	 */
+	lock->owner++;
 }
 
 /**
- * Lab4: Your code here 
  * Check whether the ticket lock is locked
  * Return 1 if locked, 0 otherwise
  * Your code should be no more than 5 lines
  */
 int is_locked(struct lock *lock)
 {
-	return -1;
+	return lock->owner != lock->next;
 }
 
 /**
- * Lab4: Your code here 
  * Initialization of the big kernel lock
  */
 void kernel_lock_init(void)
 {
+	lock_init(&big_kernel_lock);
 }
 
 /**
- * Lab4: Your code here 
  * Acquire the big kernel lock
  */
 void lock_kernel(void)
 {
+	lock(&big_kernel_lock);
 }
 
 /**
- * Lab4: Your code here 
  * Release the big kernel lock
  */
 void unlock_kernel(void)
 {
+	unlock(&big_kernel_lock);
 }

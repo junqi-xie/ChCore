@@ -116,9 +116,9 @@ void secondary_start(void)
 #endif
 
 	/**
-	 * Lab4: Your code here
 	 * Acquire the big kernel lock
 	 */
+	lock_kernel();
 
 	/* Where the AP first returns to the user mode */
 	sched();

@@ -30,17 +30,16 @@ void enable_smp_cores(void *addr)
 	secondary_boot_flag = (long *)phys_to_virt(addr);
 	for (i = 0; i < PLAT_CPU_NUM; i++) {
 		/**
-		 * Lab4: Your code here
 		 * You should set one flag to enable the APs to continue in
-		 * _start of `start.S`. Then, what's the flag?
-		 * You only need to write one line of code.
+		 * _start of `start.S`.
 		 */
+		secondary_boot_flag[i] = 1;
 
 		/**
-		 * Lab4: Your code here
 		 * The BSP waits for the currently initializing AP finishing
 		 * before activating the next one
 		 */
+		while (cpu_status[i] == cpu_hang);
 	}
 
 	/* This information is printed when all CPUs finish their initialization */

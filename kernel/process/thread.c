@@ -366,7 +366,6 @@ int sys_create_thread(u64 process_cap, u64 stack, u64 pc, u64 arg, u32 prio,
 }
 
 /*
- * Lab4: Your code here
  * Finish the sys_set_affinity
  * You do not need to schedule out current thread immediately,
  * as it is the duty of sys_yield()
@@ -385,10 +384,14 @@ int sys_set_affinity(u64 thread_cap, s32 aff)
 	}
 
 	/*
-	 * Lab4: Your code here
 	 * Finish the sys_set_affinity
 	 */
-	return -1;
+	if (thread && thread->thread_ctx) {
+		thread->thread_ctx->affinity = aff;
+	} else {
+		ret = -1;
+	}
+	return ret;
 }
 
 int sys_get_affinity(u64 thread_cap)
@@ -406,8 +409,12 @@ int sys_get_affinity(u64 thread_cap)
 	}
 
 	/*
-	 * Lab4: Your code here
 	 * Finish the sys_get_affinity
 	 */
-	return -1;
+	if (thread && thread->thread_ctx) {
+		aff = thread->thread_ctx->affinity;
+	} else {
+		aff = -1;
+	}
+	return aff;
 }

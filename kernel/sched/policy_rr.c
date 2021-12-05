@@ -55,7 +55,13 @@ int rr_sched_enqueue(struct thread *thread)
 		return -1;
 	}
 
-	u32 cpuid = smp_get_cpu_id();
+	s32 cpuid = thread->thread_ctx->affinity;
+	if (cpuid == NO_AFF) {
+		cpuid = smp_get_cpu_id();
+	} else if (cpuid >= PLAT_CPU_NUM) {
+		return -1;
+	}
+
 	if (thread->thread_ctx->type != TYPE_IDLE) {
 		list_append(&thread->ready_queue_node, &rr_ready_queue[cpuid]);
 		thread->thread_ctx->cpuid = cpuid;

@@ -39,7 +39,9 @@ void handle_irq(int type)
 	 *	The irq is not from the kernel
 	 * 	The thread being interrupted is an idle thread.
 	 */
-	if (!is_locked(&big_kernel_lock)) {
+	if (type == IRQ_EL0_64 ||
+		(current_thread && current_thread->thread_ctx &&
+		current_thread->thread_ctx->type == TYPE_IDLE)) {
 		lock_kernel();
 	}
 

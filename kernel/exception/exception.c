@@ -50,7 +50,7 @@ void handle_entry_c(int type, u64 esr, u64 address)
 	/**
 	 * Acquire the big kernel lock, if the exception is not from kernel
 	 */
-	if (!is_locked(&big_kernel_lock)) {
+	if (type == SYNC_EL0_64) {
 		lock_kernel();
 	}
 

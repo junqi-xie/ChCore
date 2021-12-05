@@ -27,10 +27,9 @@ u8 irq_handle_type[MAX_IRQ_NUM];
 void exception_init_per_cpu(void)
 {
 	/**
-	 * Lab4: Your code here
 	 * Uncomment the timer_init() when you are handling preemptive shceduling
 	 */
-	// timer_init();
+	timer_init();
 
 	/**
 	 * Setup the exception vector with the asm function written in exception.S

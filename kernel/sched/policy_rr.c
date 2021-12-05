@@ -106,6 +106,7 @@ struct thread *rr_sched_choose_thread(void)
 
 static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
 {
+	target->thread_ctx->sc->budget = budget;
 }
 
 /*
@@ -121,9 +122,17 @@ static inline void rr_sched_refill_budget(struct thread *target, u32 budget)
  */
 int rr_sched(void)
 {
+	if (current_thread && current_thread->thread_ctx->sc->budget > 0) {
+		return -1;
+	}
+
 	rr_sched_enqueue(current_thread);
 	struct thread *target = rr_sched_choose_thread();
 	switch_to_thread(target);
+
+	if (target->thread_ctx->type != TYPE_IDLE) {
+		rr_sched_refill_budget(target, DEFAULT_BUDGET);
+	}
 	return 0;
 }
 
@@ -159,12 +168,14 @@ int rr_sched_init(void)
 }
 
 /*
- * Lab4: Your code here
  * Handler called each time a timer interrupt is handled
  * Do not forget to call sched_handle_timer_irq() in proper code location.
  */
 void rr_sched_handle_timer_irq(void)
 {
+	if (current_thread->thread_ctx->sc->budget > 0) {
+		--current_thread->thread_ctx->sc->budget;
+	}
 }
 
 struct sched_ops rr = {

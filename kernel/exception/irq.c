@@ -46,9 +46,10 @@ void handle_irq(int type)
 	plat_handle_irq();
 
 	/**
-	 * Lab4: Your code here
-	 * Do you miss something?
+	 * Attempt to schedule a new thread
 	 */
+	sched();
+	eret_to_thread(switch_context());
 }
 
 void plat_handle_irq(void)

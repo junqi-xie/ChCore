@@ -24,12 +24,8 @@
 #include <sched/sched.h>
 
 /**
- * Lab4: Your code here
- * Helper function
  * Server thread calls this function and then return to client thread
  * This function should never return
- *
- * Replace the place_holder to correct value!
  */
 static int thread_migrate_to_client(struct ipc_connection *conn, u64 ret_value)
 {
@@ -37,10 +33,9 @@ static int thread_migrate_to_client(struct ipc_connection *conn, u64 ret_value)
 	current_thread->active_conn = NULL;
 
 	/**
-	 * Lab4: Your code here
 	 * The return value returned by server thread;
 	 */
-	arch_set_thread_return(source, LAB4_IPC_BLANK);
+	arch_set_thread_return(source, ret_value);
 	/**
 	 * Switch to the client
 	 */
@@ -68,7 +63,7 @@ void sys_ipc_return(u64 ret)
 
 	thread_migrate_to_client(conn, ret);
 
-	BUG("This function should never\n");
+	BUG("This function should never reach here\n");
  out:
 	return;
 }

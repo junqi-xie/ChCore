@@ -73,12 +73,8 @@ const void *syscall_table[NR_SYSCALL] = {
 	[SYS_cap_copy_from] = sys_cap_copy_from,
 	[SYS_set_affinity] = sys_set_affinity,
 	[SYS_get_affinity] = sys_get_affinity,
-	/* 
-	 * Lab4: Your code here
-	 * Add syscall
-	 */
 	[SYS_get_cpu_id] = sys_get_cpu_id,
-
+	[SYS_ipc_reg_call] = sys_ipc_reg_call,
 	[SYS_create_pmos] = sys_create_pmos,
 	[SYS_map_pmos] = sys_map_pmos,
 	[SYS_write_pmo] = sys_write_pmo,

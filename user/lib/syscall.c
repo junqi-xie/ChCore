@@ -93,11 +93,6 @@ s32 usys_get_affinity(u64 thread_cap)
 	return syscall(SYS_get_affinity, thread_cap, 0, 0, 0, 0, 0, 0, 0);
 }
 
-/*
- * Lab4: Your code here
- * Add syscall
- */
-
 u32 usys_get_cpu_id(void)
 {
 	return (u32) syscall(SYS_get_cpu_id, 0, 0, 0, 0, 0, 0, 0, 0);

@@ -11,15 +11,19 @@
  */
 
 #include <common/kprint.h>
+#include <common/lock.h>
 #include <common/machine.h>
 #include <common/macro.h>
 #include <common/mm.h>
+#include <common/smp.h>
 #include <common/uart.h>
 #include <common/vars.h>
 #include <exception/exception.h>
+#include <ipc/ipc.h>
 #include <common/types.h>
 #include <process/thread.h>
 #include <sched/sched.h>
+#include <tests/tests.h>
 
 ALIGN(STACK_ALIGNMENT)
 char kernel_stack[PLAT_CPU_NUM][KERNEL_STACK_SIZE];
@@ -56,16 +60,68 @@ void main(void *addr)
 	exception_init();
 	kinfo("[ChCore] interrupt init finished\n");
 
+	/* Initialize and then acquire the big kernel lock. */
+	kernel_lock_init();
+	lock_kernel();
+	kinfo("[ChCore] lock init finished\n");
+
+	/* Init scheduler with specified policy. */
+	sched_init(&rr);
+	kinfo("[ChCore] sched init finished\n");
+
+#ifndef TEST
+	init_test();
+#endif
+
+	/* Other cores are busy looping on the addr, wake up those cores */
+	enable_smp_cores(addr);
+	kinfo("[ChCore] boot multicore finished\n");
+
 #ifdef TEST
 	/* Create initial thread here */
 	process_create_root(TEST);
 	kinfo("[ChCore] root thread init finished\n");
 #else
 	/* We will run the kernel test if you do not type make bin=xxx */
+	run_test(true);
 	break_point();
 	BUG("No given TEST!");
 #endif
 
+	/**
+	 * Where the primary CPU first returns to the user mode
+	 * Leave the scheduler to do its job 
+	*/
+	sched();
+
+	eret_to_thread(switch_context());
+
+	/* Should provide panic and use here */
+	BUG("[FATAL] Should never be here!\n");
+}
+
+void secondary_start(void)
+{
+	kinfo("AP %u is activated!\n", smp_get_cpu_id());
+	exception_init_per_cpu();
+
+	/**
+	 * Inform the BSP at last to start cpu one by one
+	 * Hints: use cpu_status
+	*/
+	cpu_status[smp_get_cpu_id()] = cpu_run;
+
+#ifndef TEST
+	run_test(false);
+#endif
+
+	/**
+	 * Acquire the big kernel lock
+	 */
+	lock_kernel();
+
+	/* Where the AP first returns to the user mode */
+	sched();
 	eret_to_thread(switch_context());
 
 	/* Should provide panic and use here */

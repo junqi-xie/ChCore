@@ -35,18 +35,23 @@ u64 core_irq_source[PLAT_CPU_NUM] = {
 void handle_irq(int type)
 {
 	/**
-	 * Lab4: Your code here
 	 * Acquire the big kernel lock, if
 	 *	The irq is not from the kernel
 	 * 	The thread being interrupted is an idle thread.
 	 */
+	if (type == IRQ_EL0_64 ||
+		(current_thread && current_thread->thread_ctx &&
+		current_thread->thread_ctx->type == TYPE_IDLE)) {
+		lock_kernel();
+	}
 
 	plat_handle_irq();
 
 	/**
-	 * Lab4: Your code here
-	 * Do you miss something?
+	 * Attempt to schedule a new thread
 	 */
+	sched();
+	eret_to_thread(switch_context());
 }
 
 void plat_handle_irq(void)

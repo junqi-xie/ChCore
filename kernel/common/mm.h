@@ -17,6 +17,7 @@
 #include <common/mmu.h>
 
 #define PAGE_SIZE (0x1000)
+#define SIZE_2M   (0x200000)
 
 void mm_init();
 void set_page_table(paddr_t pgtbl);

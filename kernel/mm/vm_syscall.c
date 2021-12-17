@@ -323,19 +323,20 @@ u64 sys_handle_brk(u64 addr)
 	u64 retval;
 	int ret;
 
+	int pmo_cap;
+
 	vmspace = obj_get(current_process, VMSPACE_OBJ_ID, TYPE_VMSPACE);
 
 	/*
-	 * Lab3: Your code here
 	 * The sys_handle_brk syscall modifies the top address of heap to addr.
 	 *
-	 * If addr is 0, this function should initialize the heap, implemeted by:
+	 * If addr is 0, this function should initialize the heap, implemented by:
 	 * 1. Create a new pmo with size 0 and type PMO_ANONYM.
 	 * 2. Initialize vmspace->heap_vmr using function init_heap_vmr(), which generates 
-	 * the mapping between  user heap's virtual address (already stored in 
+	 * the mapping between user heap's virtual address (already stored in 
 	 * vmspace->user_current_heap) and the pmo you just created.
 	 *
-	 * HINT: For more details about how to create and initiailze a pmo, check function 
+	 * HINT: For more details about how to create and initialize a pmo, check function 
 	 * 'load_binary' for reference.
 	 *
 	 * If addr is larger than heap, the size of vmspace->heap_vmr and the size of its 
@@ -348,10 +349,51 @@ u64 sys_handle_brk(u64 addr)
 	 *
 	 */
 
+	if (addr == 0) {
+		pmo = obj_alloc(TYPE_PMO, sizeof(*pmo));
+		pmo_cap = -1;
+		if (!pmo) {
+			ret = -ENOMEM;
+			goto out_free_cap;
+		}
+		pmo_init(pmo, PMO_ANONYM, 0, 0);
+		pmo_cap = cap_alloc(current_process, pmo, 0);
+		if (pmo_cap < 0) {
+			ret = pmo_cap;
+			goto out_free_obj;
+		}
+		vmr = init_heap_vmr(vmspace, vmspace->user_current_heap, pmo);
+		if (!vmr) {
+			ret = -ENOMEM;
+			goto out_fail;
+		}
+		vmspace->heap_vmr = vmr;
+		retval = vmspace->user_current_heap;
+	} else {
+		vmr = vmspace->heap_vmr;
+		pmo = vmspace->heap_vmr->pmo;
+		len = addr - vmr->start - vmr->size;
+		if (len > 0) {
+			vmr->size += len;
+			pmo->size += len;
+			retval = addr;
+		} else {
+			ret = -EINVAL;
+			goto out_fail;
+		}
+	}
+
 	/*
 	 * return origin heap addr on failure;
 	 * return new heap addr on success.
 	 */
 	obj_put(vmspace);
 	return retval;
+ out_free_obj:
+	obj_free(pmo);
+ out_free_cap:
+	if (pmo_cap != 0)
+		cap_free(current_process, pmo_cap);
+ out_fail:
+	return ret;
 }

@@ -75,41 +75,73 @@ static struct page *get_buddy_chunk(struct phys_mem_pool *pool,
 	return virt_to_page(pool, (void *)buddy_chunk_addr);
 }
 
+void list_add_page(struct phys_mem_pool *pool, struct page *page)
+{
+	struct free_list *free_list = &pool->free_lists[page->order];
+	list_add(&page->node, &free_list->free_list);
+	++free_list->nr_free;
+}
+
+void list_del_page(struct phys_mem_pool *pool, struct page *page)
+{
+	struct free_list *free_list = &pool->free_lists[page->order];
+	list_del(&page->node);
+	--free_list->nr_free;
+}
+
 /*
- * split_page: split the memory block into two smaller sub-block, whose order
- * is half of the origin page.
+ * split_page: split the memory block into two smaller sub-block,
+ * whose order is half of the origin page.
  * pool @ physical memory structure reserved in the kernel
  * order @ order for target page block
  * page @ splitted page
  * 
- * Hints: don't forget to substract the free page number for the corresponding free_list.
- * you can invoke split_page recursively until the given page can not be splitted into two
- * smaller sub-pages.
+ * Hints: don't forget to substract the free page number for the
+ * corresponding free_list. you can invoke split_page recursively
+ * until the given page can not be splitted into two smaller sub-pages.
  */
 static struct page *split_page(struct phys_mem_pool *pool, u64 order,
 			       struct page *page)
 {
-	// <lab2>
-	struct page *split_page = NULL;
-	return split_page;
-	// </lab2>
+	if (page->order == order) {
+		return page;
+	} else {
+		--page->order;
+		list_add_page(pool, get_buddy_chunk(pool, page));
+		return split_page(pool, order, page);
+	}
 }
 
 /*
  * buddy_get_pages: get free page from buddy system.
  * pool @ physical memory structure reserved in the kernel
- * order @ get the struct page of (1<<order) continous pages from the buddy system
+ * order @ get the struct page of (1<<order) continous pages
+ * from the buddy system
  * 
- * Hints: Find the corresonding free_list which can allocate 1<<order
- * continuous pages and don't forget to split the list node after allocation   
+ * Hints: Find the corresonding free_list which can allocate
+ * 1<<order continuous pages and don't forget to split the
+ * list node after allocation   
  */
 struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
 {
-	// <lab2>
-	struct page *page = NULL;
+	u64 free_order = order;
+	while (free_order < BUDDY_MAX_ORDER) {
+		if (pool->free_lists[free_order].nr_free > 0) {
+			break;
+		} else {
+			++free_order;
+		}
+	}
+	if (free_order == BUDDY_MAX_ORDER) {
+		return NULL;
+	}
 
+	struct page *page = list_entry(
+		pool->free_lists[free_order].free_list.next, struct page, node);
+	list_del_page(pool, page);
+	page = split_page(pool, order, page);
+	page->allocated = 1;
 	return page;
-	// </lab2>
 }
 
 /*
@@ -123,11 +155,16 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
  */
 static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
 {
-	// <lab2>
-
-	struct page *merge_page = NULL;
-	return merge_page;
-	// </lab2>
+	struct page *buddy = get_buddy_chunk(pool, page);
+	if (page->order == BUDDY_MAX_ORDER - 1 ||
+		!buddy || buddy->allocated || buddy->order < page->order) {
+		return page;
+	} else {
+		list_del_page(pool, buddy);
+		page = page < buddy ? page : buddy;
+		++page->order;
+		return merge_page(pool, page);
+	}
 }
 
 /*
@@ -139,9 +176,9 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
  */
 void buddy_free_pages(struct phys_mem_pool *pool, struct page *page)
 {
-	// <lab2>
-
-	// </lab2>
+	page->allocated = 0;
+	page = merge_page(pool, page);
+	list_add_page(pool, page);
 }
 
 void *page_to_virt(struct phys_mem_pool *pool, struct page *page)

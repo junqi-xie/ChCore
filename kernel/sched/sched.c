@@ -125,21 +125,22 @@ u64 switch_context(void)
 		switch_thread_vmspace_to(target_thread);
 	}
 	/*
-	 * Lab3: Your code here
 	 * Return the correct value in order to make eret_to_thread work correctly
 	 * in main.c
 	 */
-	return 0;
+	return (u64)target_ctx->ec.reg;
 }
 
 /* SYSCALL functions */
 
 /**
- * Lab4: Your code here 
  * Finish the sys_yield function
  */
 void sys_yield(void)
 {
+	current_thread->thread_ctx->sc->budget = 0;
+	sched();
+	eret_to_thread(switch_context());
 }
 
 void sys_top(void)

@@ -106,19 +106,19 @@ void secondary_start(void)
 	exception_init_per_cpu();
 
 	/**
-	 * Lab4: Your code here
 	 * Inform the BSP at last to start cpu one by one
 	 * Hints: use cpu_status
 	*/
+	cpu_status[smp_get_cpu_id()] = cpu_run;
 
 #ifndef TEST
 	run_test(false);
 #endif
 
 	/**
-	 * Lab4: Your code here
 	 * Acquire the big kernel lock
 	 */
+	lock_kernel();
 
 	/* Where the AP first returns to the user mode */
 	sched();

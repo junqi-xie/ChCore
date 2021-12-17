@@ -93,40 +93,31 @@ int ipc_send_cap(struct ipc_connection *conn, ipc_msg_t * ipc_msg)
 }
 
 /**
- * Lab4: Your code here
- * Helper function
  * Client thread calls this function and then return to server thread
  * This function should never return
- *
- * Replace the place_holder to correct value!
  */
 static u64 thread_migrate_to_server(struct ipc_connection *conn, u64 arg)
 {
 	struct thread *target = conn->target;
 
 	conn->source = current_thread;
+	conn->callback = conn->target->server_ipc_config->callback;
 	target->active_conn = conn;
 	current_thread->thread_ctx->state = TS_WAITING;
 	obj_put(conn);
 
 	/**
-	 * Lab4: Your code here
-	 * This command set the sp register, read the file to find which field
-	 * of the ipc_connection stores the stack of the server thread?
-	 * */
-	arch_set_thread_stack(target, LAB4_IPC_BLANK);
+	 * This command set the sp register
+	 */
+	arch_set_thread_stack(target, conn->server_stack_top);
 	/**
-	 * Lab4: Your code here
-	 * This command set the ip register, read the file to find which field
-	 * of the ipc_connection stores the instruction to be called when switch
-	 * to the server?
-	 * */
-	arch_set_thread_next_ip(target, LAB4_IPC_BLANK);
+	 * This command set the ip register
+	 */
+	arch_set_thread_next_ip(target, conn->callback);
 	/**
-	 * Lab4: Your code here
 	 * The argument set by sys_ipc_call;
 	 */
-	arch_set_thread_arg(target, LAB4_IPC_BLANK);
+	arch_set_thread_arg(target, arg);
 
 	/**
 	 * Passing the scheduling context of the current thread to thread of
@@ -146,7 +137,6 @@ static u64 thread_migrate_to_server(struct ipc_connection *conn, u64 arg)
 }
 
 /**
- * Lab4: Your code here
  * The client thread calls sys_ipc_call to migrate to the server thread.
  * When you transfer the ipc_msg (which is the virtual address in the client
  * vmspace), do not forget to change the virtual address to server's vmspace.
@@ -165,25 +155,24 @@ u64 sys_ipc_call(u32 conn_cap, ipc_msg_t * ipc_msg)
 	}
 
 	/**
-	 * Lab4: Your code here
 	 * Here, you need to transfer all the capbiliies of client thread to
 	 * capbilities in server thread in the ipc_msg.
 	 */
-
+	r = ipc_send_cap(conn, ipc_msg);
+	if (r < 0)
+		goto out_obj_put;
 	r = copy_to_user((char *)&ipc_msg->server_conn_cap,
 			 (char *)&conn->server_conn_cap, sizeof(u64));
 	if (r < 0)
 		goto out_obj_put;
 
 	/**
-	 * Lab4: Your code here
 	 * The arg is actually the 64-bit arg for ipc_dispatcher
-	 * Then what value should the arg be?
-	 * */
-	arg = LAB4_IPC_BLANK;
+	 */
+	arg = conn->target->server_ipc_config->vm_config.buf_base_addr;
 	thread_migrate_to_server(conn, arg);
 
-	BUG("This function should never\n");
+	BUG("This function should never reach here\n");
  out_obj_put:
 	obj_put(conn);
  out_fail:
@@ -191,10 +180,22 @@ u64 sys_ipc_call(u32 conn_cap, ipc_msg_t * ipc_msg)
 }
 
 /**
- * Lab4: Your code here
  * Implement your sys_ipc_reg_call
- * */
+ */
 u64 sys_ipc_reg_call(u32 conn_cap, u64 arg0)
 {
-	return -1;
+	struct ipc_connection *conn = NULL;
+	int r;
+
+	conn = obj_get(current_thread->process, conn_cap, TYPE_CONNECTION);
+	if (!conn) {
+		r = -ECAPBILITY;
+		goto out_fail;
+	}
+
+	thread_migrate_to_server(conn, arg0);
+
+	BUG("This function should never reach here\n");
+ out_fail:
+	return r;
 }

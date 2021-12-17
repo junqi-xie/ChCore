@@ -47,9 +47,7 @@ void do_page_fault(u64 esr, u64 fault_ins_addr)
 	case DFSC_TRANS_FAULT_L3:{
 			int ret;
 
-			ret =
-			    handle_trans_fault(current_thread->vmspace,
-					       fault_addr);
+			ret = handle_trans_fault(current_thread->vmspace, fault_addr);
 			if (ret != 0) {
 				kinfo("pgfault at 0x%p failed\n", fault_addr);
 				sys_exit(ret);
@@ -68,10 +66,10 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 	struct vmregion *vmr;
 	struct pmobject *pmo;
 	paddr_t pa;
-	u64 offset;
+	// u64 offset;
+	int ret;
 
 	/*
-	 * Lab3: your code here
 	 * In this function, you should:
 	 * 1. Get the vmregion of the fault_addr using find_vmr_for_va
 	 * 2. If the pmo is not of type PMO_ANONYM, return -ENOMAPPING
@@ -86,6 +84,22 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 	 * are recorded in a radix tree for easy management. Such code
 	 * has been omitted in our lab for simplification.
 	 */
+	vmr = find_vmr_for_va(vmspace, fault_addr);
+	if (!vmr) {
+		kinfo("handle_trans_fault: no vmr find for va 0x%lx!\n", fault_addr);
+		return -ENOMAPPING;
+	}
 
-	return 0;
+	pmo = vmr->pmo;
+	if (pmo->type != PMO_ANONYM) {
+		kinfo("handle_trans_fault: pmo for va 0x%lx is not of type PMO_ANONYM",
+		      fault_addr);
+		return -ENOMAPPING;
+	}
+
+	pa = (paddr_t)virt_to_phys(get_pages(0));
+	fault_addr = ROUND_DOWN(fault_addr, PAGE_SIZE);
+	ret = map_range_in_pgtbl(vmspace->pgtbl, fault_addr, pa,
+	                         PAGE_SIZE, vmr->perm);
+	return ret;
 }

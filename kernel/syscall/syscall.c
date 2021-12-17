@@ -28,9 +28,9 @@ void sys_debug(long arg)
 void sys_putc(char ch)
 {
 	/*
-	 * Lab3: Your code here
 	 * Send ch to the screen in anyway as your like
 	 */
+	uart_send(ch);
 }
 
 u32 sys_getc(void)
@@ -38,22 +38,25 @@ u32 sys_getc(void)
 	return uart_recv();
 }
 
-/* 
- * Lab4: Your code here
+/*
  * Finish the sys_get_cpu_id syscall
  */
 u32 sys_get_cpu_id(void)
 {
-	return -1;
+	return smp_get_cpu_id();
 }
 
 /*
- * Lab3: Your code here
  * Update the syscall table as you like to redirect syscalls
  * to functions accordingly
  */
 const void *syscall_table[NR_SYSCALL] = {
 	[0 ... NR_SYSCALL - 1] = sys_debug,
+	[SYS_putc] = sys_putc,
+	[SYS_exit] = sys_exit,
+	[SYS_create_pmo] = sys_create_pmo,
+	[SYS_map_pmo] = sys_map_pmo,
+	[SYS_handle_brk] = sys_handle_brk,
 	/* lab3 syscalls finished */
 
 	[SYS_getc] = sys_getc,
@@ -70,12 +73,8 @@ const void *syscall_table[NR_SYSCALL] = {
 	[SYS_cap_copy_from] = sys_cap_copy_from,
 	[SYS_set_affinity] = sys_set_affinity,
 	[SYS_get_affinity] = sys_get_affinity,
-	/* 
-	 * Lab4: Your code here
-	 * Add syscall
-	 */
 	[SYS_get_cpu_id] = sys_get_cpu_id,
-
+	[SYS_ipc_reg_call] = sys_ipc_reg_call,
 	[SYS_create_pmos] = sys_create_pmos,
 	[SYS_map_pmos] = sys_map_pmos,
 	[SYS_write_pmo] = sys_write_pmo,

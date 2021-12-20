@@ -6,6 +6,9 @@
 #include <cpio.h>
 #include <launcher.h>
 
+static struct dentry *tfs_lookup(struct inode *dir, const char *name,
+				 size_t len);
+
 static struct inode *tmpfs_root;
 
 /*
@@ -120,6 +123,7 @@ static struct dentry *new_dent(struct inode *inode, const char *name,
 // Assume that no separator ('/') in `name`.
 static int tfs_mknod(struct inode *dir, const char *name, size_t len, int mkdir)
 {
+	u64 hash = hash_chars(name, len);
 	struct inode *inode;
 	struct dentry *dent;
 
@@ -129,8 +133,19 @@ static int tfs_mknod(struct inode *dir, const char *name, size_t len, int mkdir)
 		WARN("mknod with len of 0");
 		return -ENOENT;
 	}
-	// Lab5: your code here
 
+	inode = mkdir ? new_dir() : new_reg();
+	if (IS_ERR(inode))
+		return PTR_ERR(inode);
+	
+	dent = new_dent(inode, name, len);
+	if (IS_ERR(dent)) {
+		free(inode);
+		return PTR_ERR(inode);
+	}
+	
+	init_hlist_node(&dent->node);
+	htable_add(&dir->dentries, (u32) hash, &dent->node);
 	return 0;
 }
 
@@ -177,7 +192,7 @@ int tfs_namex(struct inode **dirat, const char **name, int mkdir_p)
 	BUG_ON(*name == NULL);
 
 	char buff[MAX_FILENAME_LEN + 1];
-	int i;
+	int i = 0;
 	struct dentry *dent;
 	int err;
 
@@ -195,8 +210,37 @@ int tfs_namex(struct inode **dirat, const char **name, int mkdir_p)
 	if (!**name)
 		return -EINVAL;
 
-    // Lab5: your code here
-	
+	while ((*name)[i] && (*name)[i] != '/') {
+		buff[i] = (*name)[i];
+		++i;
+	}
+	buff[i] = '\0';
+
+	dent = tfs_lookup(*dirat, buff, i);
+	if (!dent) {
+		if (mkdir_p) {
+			err = tfs_mkdir(*dirat, buff, i);
+			if (err < 0)
+				return err;
+			dent = tfs_lookup(*dirat, buff, i);
+		} else
+			return -ENOENT;
+	}
+
+	if ((*name)[i] == '/') {
+		*dirat = dent->inode;
+		*name += i;
+		while (**name && **name == '/')
+			++(*name);
+		
+		if (dent->inode->type != FS_DIR)
+			return -ENOTDIR;
+		else if (!**name)
+			return 0;
+		else
+			return tfs_namex(dirat, name, mkdir_p);
+	}
+
 	return 0;
 }
 

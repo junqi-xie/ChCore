@@ -401,7 +401,26 @@ int tfs_load_image(const char *start)
 	cpio_extract(start, "/");
 
 	for (f = g_files.head.next; f; f = f->next) {
-		// Lab5: your code here
+		dirat = tmpfs_root;
+		leaf = f->name;	
+		err = tfs_namex(&dirat, &leaf, 0);
+		if (err != -ENOENT)
+			return err;
+		len = strlen(leaf);
+
+		if ((f->header.c_mode & C_ISREG) == C_ISREG) {
+			err = tfs_creat(dirat, leaf, len);
+			if (err < 0)
+				return err;
+			dent = tfs_lookup(dirat, leaf, len);
+			write_count = tfs_file_write(dent->inode, 0, f->data, f->header.c_filesize);
+			if (write_count < f->header.c_filesize)
+				return -ENOSPC;
+		} else if ((f->header.c_mode & C_ISDIR) == C_ISDIR) {
+			err = tfs_mkdir(dirat, leaf, len);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	return 0;

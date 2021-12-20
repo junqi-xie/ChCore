@@ -40,7 +40,7 @@ static int cpio_parse_header(const void *addr, struct cpio_header *header)
 
 	cpio_info("print in text: %s\n", addr);
 	/* headers other than newc are not supported */
-	BUG_ON(strncmp(newc->c_magic, "070701", 6));
+	BUG_ON(strncmp(newc->c_magic, MAGIC, 6));
 
 	header->c_ino = hex8_u64(newc->c_ino);
 	header->c_mode = hex8_u64(newc->c_mode);

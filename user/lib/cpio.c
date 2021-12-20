@@ -31,7 +31,7 @@ static int cpio_parse_header(const void *addr, struct cpio_header *header)
 
 	// cpio_info("print in text: %s\n", addr);
 	/* headers other than newc are not supported */
-	BUG_ON(strncmp(newc->c_magic, "070701", 6));
+	BUG_ON(strncmp(newc->c_magic, MAGIC, 6));
 
 	header->c_ino = hex8_u64(newc->c_ino);
 	header->c_mode = hex8_u64(newc->c_mode);
@@ -84,7 +84,6 @@ void cpio_extract(const void *addr, const char *dirat)
 
 	for (;;) {
 		f = cpio_alloc_file();
-		// printf("cpio_alloc_file returns %p\n", f);
 		if (f == NULL) {
 			kwarn("cpio_alloc_file fails due to lack of memory.\n");
 			return;
@@ -97,7 +96,7 @@ void cpio_extract(const void *addr, const char *dirat)
 		p += sizeof(struct cpio_newc_header);
 
 		if (0 == strcmp(p, "TRAILER!!!")) {
-			// cpio_free(f);
+			cpio_free(f);
 			break;
 		}
 

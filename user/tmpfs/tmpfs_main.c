@@ -12,9 +12,12 @@ static void fs_dispatch(ipc_msg_t * ipc_msg)
 	if (ipc_msg->data_len >= 4) {
 		struct fs_request *fr = (struct fs_request *)
 		    ipc_get_msg_data(ipc_msg);
+		u64 cap = ipc_get_msg_cap(ipc_msg, 0);
+		usys_map_pmo(SELF_CAP, cap, (u64)fr->buff, VM_READ | VM_WRITE);
+
 		switch (fr->req) {
 		case FS_REQ_SCAN:
-			// Lab5: your code here
+			ret = fs_server_scan(fr->path, fr->offset, fr->buff, fr->count);
 			break;
 		case FS_REQ_MKDIR:
 			ret = fs_server_mkdir(fr->path);
@@ -39,10 +42,10 @@ static void fs_dispatch(ipc_msg_t * ipc_msg)
 			usys_exit(-1);
 			break;
 		case FS_REQ_WRITE:
-			// Lab5: your code here
+			ret = fs_server_write(fr->path, fr->offset, fr->buff, fr->count);
 			break;
 		case FS_REQ_READ:
-			// Lab5: your code here
+			ret = fs_server_read(fr->path, fr->offset, fr->buff, fr->count);
 			break;
 		case FS_REQ_GET_SIZE:
 			ret = fs_server_get_size(fr->path);
@@ -53,6 +56,7 @@ static void fs_dispatch(ipc_msg_t * ipc_msg)
 			usys_exit(-1);
 			break;
 		}
+		usys_unmap_pmo(SELF_CAP, cap, (u64)fr->buff);
 	} else {
 		printf("TMPFS: no operation num\n");
 		usys_exit(-1);

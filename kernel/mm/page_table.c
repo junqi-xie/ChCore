@@ -35,17 +35,17 @@ void set_page_table(paddr_t pgtbl)
 	set_ttbr0_el1(pgtbl);
 }
 
-#define USER_PTE 0
-#define KERNEL_PTE 1
+#define USER_PTE 1
+#define KERNEL_PTE 0
 /*
  * the 3rd arg means the kind of PTE.
  */
 static int set_pte_flags(pte_t * entry, vmr_prop_t flags, int kind)
 {
 	if (flags & VMR_WRITE)
-		entry->l3_page.AP = AARCH64_PTE_AP_HIGH_RW_EL0_RW;
+		entry->l3_page.AP = AARCH64_PTE_AP_HIGH_RW | kind;
 	else
-		entry->l3_page.AP = AARCH64_PTE_AP_HIGH_RO_EL0_RO;
+		entry->l3_page.AP = AARCH64_PTE_AP_HIGH_RO | kind;
 
 	if (flags & VMR_EXEC)
 		entry->l3_page.UXN = AARCH64_PTE_UX;
@@ -316,9 +316,9 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
 static int set_pte_flags_hugepage(pte_t * entry, vmr_prop_t flags, int kind)
 {
 	if (flags & VMR_WRITE)
-		entry->l2_block.AP = AARCH64_PTE_AP_HIGH_RW_EL0_RW;
+		entry->l2_block.AP = AARCH64_PTE_AP_HIGH_RW | kind;
 	else
-		entry->l2_block.AP = AARCH64_PTE_AP_HIGH_RO_EL0_RO;
+		entry->l2_block.AP = AARCH64_PTE_AP_HIGH_RO | kind;
 
 	if (flags & VMR_EXEC)
 		entry->l2_block.UXN = AARCH64_PTE_UX;

@@ -48,7 +48,7 @@ int sys_create_pmo(u64 size, u64 type)
 	int cap, r;
 	struct pmobject *pmo;
 
-	kinfo("sys_create_pmo called\n");
+	// kinfo("sys_create_pmo called\n");
 	BUG_ON(size == 0);
 	pmo = obj_alloc(TYPE_PMO, sizeof(*pmo));
 	if (!pmo) {
@@ -180,7 +180,7 @@ int sys_map_pmo(u64 target_process_cap, u64 pmo_cap, u64 addr, u64 perm)
 	struct process *target_process;
 	int r;
 
-	kinfo("sys_map_pmo called\n");
+	// kinfo("sys_map_pmo called\n");
 	pmo = obj_get(current_process, pmo_cap, TYPE_PMO);
 	if (!pmo) {
 		r = -ECAPBILITY;

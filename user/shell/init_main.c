@@ -8,8 +8,7 @@
 char getch()
 {
 	char c;
-	// Lab5: your code here
-
+	c = usys_getc();
 	return c;
 }
 

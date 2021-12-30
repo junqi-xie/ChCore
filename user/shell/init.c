@@ -52,9 +52,13 @@ char *readline(const char *prompt)
 		c = getch();
 		if (c < 0)
 			return NULL;
-		// Lab5: your code here
-
+		usys_putc(c);
+		if (c == '\n')
+			break;
+		buf[i] = c;
+		++i;
 	}
+	buf[i] = '\0';
 	return buf;
 }
 

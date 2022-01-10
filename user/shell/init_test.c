@@ -5,17 +5,6 @@
 #include <syscall.h>
 #include <string.h>
 
-#define TEST_FUNC(name) \
-  do { \
-    if (name() == 0) { \
-      printf(#name" pass!\n"); \
-    } else { \
-      printf(#name" fail!\n"); \
-    } \
-  } while (0)
-
-// static int
-
 /* blocking getchar */
 char getch()
 {
@@ -32,11 +21,6 @@ static void test_readline()
 	readline("> ");
 }
 
-static void test_echo()
-{
-	builtin_cmd("echo abc123XYZ");
-}
-
 int main()
 {
 	printf("Start init_test.\n");
@@ -45,15 +29,15 @@ int main()
 	boot_fs();
 
 	test_readline();
-	test_echo();
-
+	builtin_cmd("echo abc123XYZ");
 	builtin_cmd("ls");
 	builtin_cmd("ls tar");
-	builtin_cmd("cat tar/cat_test.txt");
+	builtin_cmd("cd tar");
+	builtin_cmd("cat cat_test.txt");
 	test_readline();
 	test_readline();
 
-	run_cmd("ipc_mem.bin");
+	run_cmd("/ipc_mem.bin");
 	printf("\n");
 	builtin_cmd("top");
 

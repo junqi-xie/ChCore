@@ -13,12 +13,26 @@
 
 extern ipc_struct_t *tmpfs_ipc_struct;
 static ipc_struct_t ipc_struct;
-static int tmpfs_scan_pmo_cap;
+static int tmpfs_scan_pmo_cap, tmpfs_read_pmo_cap;
 
 /* fs_server_cap in current process; can be copied to others */
 int fs_server_cap;
 
 #define BUFLEN	4096
+static char path[BUFLEN] = "/";
+
+static int get_path(char *pathbuf, char *cmdline)
+{
+	pathbuf[0] = '\0';
+	while (*cmdline == ' ')
+		cmdline++;
+	if (*cmdline == '\0')
+		return -1;
+	else if (*cmdline != '/')
+		strcpy(pathbuf, path);
+	strcat(pathbuf, cmdline);
+	return 0;
+}
 
 static int do_complement(char *buf, char *complement, int complement_time)
 {
@@ -69,9 +83,12 @@ int do_cd(char *cmdline)
 		cmdline++;
 	if (*cmdline == '\0')
 		return 0;
-	if (*cmdline != '/') {
+	else if (*cmdline != '/') {
+		strcat(path, cmdline);
+		strcat(path, "/");
 	}
-	printf("Build-in command cd %s: Not implemented!\n", cmdline);
+	else
+		strcpy(path, cmdline);
 	return 0;
 }
 
@@ -101,15 +118,23 @@ int do_ls(char *cmdline)
 
 int do_cat(char *cmdline)
 {
+	int ret;
 	char pathbuf[BUFLEN];
 
-	pathbuf[0] = '\0';
 	cmdline += 3;
-	while (*cmdline == ' ')
-		cmdline++;
-	strcat(pathbuf, cmdline);
-	// fs_scan(pathbuf);
-	printf("apple banana This is a test file.\n");
+	ret = get_path(pathbuf, cmdline);
+	if (ret < 0) {
+		printf("[Shell] No input file\n");
+		return ret;
+	}
+
+	ret = fs_read(pathbuf, &tmpfs_read_pmo_cap);
+	if (ret < 0) {
+		printf("[Shell] No such file\n");
+		return ret;
+	}
+	printf("%s\n", (const char *)TMPFS_READ_BUF_VADDR);
+
 	return 0;
 }
 
@@ -118,7 +143,7 @@ int do_echo(char *cmdline)
 	cmdline += 4;
 	while (*cmdline == ' ')
 		cmdline++;
-	printf("%s", cmdline);
+	printf("%s\n", cmdline);
 	return 0;
 }
 
@@ -138,29 +163,24 @@ int builtin_cmd(char *cmdline)
 	for (i = 0; cmdline[i] != ' ' && cmdline[i] != '\0'; i++)
 		cmd[i] = cmdline[i];
 	cmd[i] = '\0';
-	if (!strcmp(cmd, "quit") || !strcmp(cmd, "exit"))
+	if (!strcmp(cmd, "quit") || !strcmp(cmd, "exit")) {
 		usys_exit(0);
-	if (!strcmp(cmd, "cd")) {
+	} else if (!strcmp(cmd, "cd")) {
 		ret = do_cd(cmdline);
 		return !ret ? 1 : -1;
-	}
-	if (!strcmp(cmd, "ls")) {
+	} else if (!strcmp(cmd, "ls")) {
 		ret = do_ls(cmdline);
 		return !ret ? 1 : -1;
-	}
-	if (!strcmp(cmd, "echo")) {
+	} else if (!strcmp(cmd, "echo")) {
 		ret = do_echo(cmdline);
 		return !ret ? 1 : -1;
-	}
-	if (!strcmp(cmd, "cat")) {
+	} else if (!strcmp(cmd, "cat")) {
 		ret = do_cat(cmdline);
 		return !ret ? 1 : -1;
-	}
-	if (!strcmp(cmd, "clear")) {
+	} else if (!strcmp(cmd, "clear")) {
 		do_clear();
 		return 1;
-	}
-	if (!strcmp(cmd, "top")) {
+	} else if (!strcmp(cmd, "top")) {
 		ret = do_top();
 		return !ret ? 1 : -1;
 	}
@@ -174,17 +194,13 @@ int run_cmd(char *cmdline)
 	int ret;
 	int caps[1];
 
-	pathbuf[0] = '\0';
-	while (*cmdline == ' ')
-		cmdline++;
-	if (*cmdline == '\0') {
-		return -1;
-	} else if (*cmdline != '/') {
-		strcpy(pathbuf, "/");
+	ret = get_path(pathbuf, cmdline);
+	if (ret < 0) {
+		printf("[Shell] No input file\n");
+		return ret;
 	}
-	strcat(pathbuf, cmdline);
 
-	ret = readelf_from_fs(pathbuf, &user_elf);
+	ret = fs_readelf(pathbuf, &tmpfs_read_pmo_cap, &user_elf);
 	if (ret < 0) {
 		printf("[Shell] No such binary\n");
 		return ret;
@@ -258,6 +274,15 @@ void boot_fs(void)
 	ret = usys_map_pmo(SELF_CAP,
 			   tmpfs_scan_pmo_cap,
 			   TMPFS_SCAN_BUF_VADDR, VM_READ | VM_WRITE);
+	fail_cond(ret < 0, "usys_map_pmo ret %d\n", ret);
+
+	tmpfs_read_pmo_cap = usys_create_pmo(SIZE_2M, PMO_DATA);
+	fail_cond(tmpfs_read_pmo_cap < 0, "usys create_ret ret %d\n",
+		  tmpfs_read_pmo_cap);
+
+	ret = usys_map_pmo(SELF_CAP,
+			   tmpfs_read_pmo_cap,
+			   TMPFS_READ_BUF_VADDR, VM_READ | VM_WRITE);
 	fail_cond(ret < 0, "usys_map_pmo ret %d\n", ret);
 
 	printf("fs is UP.\n");

@@ -98,21 +98,44 @@ int do_top()
 	return 0;
 }
 
-void fs_scan(char *path)
-{
-	// Lab5: your code here
-}
-
 int do_ls(char *cmdline)
 {
+	int ret, start = 0;
 	char pathbuf[BUFLEN];
+	char strbuf[256];
+	void *vp;
+	struct dirent *p;
+	int i;
 
-	pathbuf[0] = '\0';
 	cmdline += 2;
-	while (*cmdline == ' ')
-		cmdline++;
-	strcat(pathbuf, cmdline);
-	fs_scan(pathbuf);
+	ret = get_path(pathbuf, cmdline);
+	if (ret < 0) {
+		strcpy(pathbuf, path);
+	}
+	i = strlen(pathbuf) - 1;
+	if (i != 0 && pathbuf[i] == '/') {
+		pathbuf[i] = '\0';
+	}
+
+	do {
+		ret = fs_scan(pathbuf, &tmpfs_scan_pmo_cap, start);
+		if (ret < 0) {
+			printf("[Shell] No such directory\n");
+			return ret;
+		}
+
+		vp = (void *)TMPFS_SCAN_BUF_VADDR;
+		start += ret;
+		for (i = 0; i < ret; ++i) {
+			p = vp;
+			strcpy(strbuf, p->d_name);
+			if (strbuf[0] != '.') {
+				printf("%s\n", strbuf);
+			}
+			vp += p->d_reclen;
+		}
+	} while (ret != 0);
+
 	return 0;
 }
 

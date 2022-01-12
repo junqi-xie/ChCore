@@ -20,3 +20,4 @@ void *single_file_handler(const void *start, size_t size, void *data);
 int readelf_from_kernel_cpio(const char *filename, struct user_elf *user_elf);
 int fs_read(const char *pathbuf, int *tmpfs_read_pmo_cap);
 int fs_readelf(const char *pathbuf, int *tmpfs_read_pmo_cap, struct user_elf *user_elf);
+int fs_scan(const char *pathbuf, int *tmpfs_scan_pmo_cap, int offset);

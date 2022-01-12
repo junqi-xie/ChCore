@@ -152,3 +152,26 @@ int fs_readelf(const char *pathbuf, int *tmpfs_read_pmo_cap, struct user_elf *us
 
 	return ret;
 }
+
+int fs_scan(const char *pathbuf, int *tmpfs_scan_pmo_cap, int offset)
+{
+	ipc_msg_t *ipc_msg;
+	int ret;
+	struct fs_request fr;
+
+	/* IPC send cap */
+	ipc_msg = ipc_create_msg(tmpfs_ipc_struct,
+				 sizeof(struct fs_request), 1);
+
+	fr.req = FS_REQ_SCAN;
+	strcpy((void *)fr.path, pathbuf);
+	fr.offset = offset;
+	fr.buff = (char *)TMPFS_SCAN_BUF_VADDR;
+	fr.count = PAGE_SIZE;
+	ipc_set_msg_cap(ipc_msg, 0, *tmpfs_scan_pmo_cap);
+	ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
+	ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+		
+	ipc_destroy_msg(ipc_msg);
+	return ret;
+}

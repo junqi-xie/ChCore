@@ -158,7 +158,7 @@ int do_cd(char *cmdline)
 
 int do_top()
 {
-	// Lab5: your code here
+	usys_top();
 	return 0;
 }
 

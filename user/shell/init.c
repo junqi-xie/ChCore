@@ -36,11 +36,55 @@ static int get_path(char *pathbuf, char *cmdline)
 
 static int do_complement(char *buf, char *complement, int complement_time)
 {
-	int r = -1;
-	// Lab5: your code here
+	int ret, start = 0;
+	char pathbuf[BUFLEN];
+	char strbuf[256];
+	void *vp;
+	struct dirent *p;
+	int i, len;
 
-	return r;
+	ret = get_path(pathbuf, buf);
+	printf("\n%s", pathbuf);
+	if (ret < 0) {
+		printf("[Shell] No input file\n");
+		return ret;
+	}
+	i = strlen(pathbuf) - 1;
+	while (pathbuf[i] != '/')
+		--i;
+	if (i == 0) {
+		strcpy(buf, pathbuf + 1);
+		pathbuf[1] = '\0';
+	} else {
+		strcpy(buf, pathbuf + i + 1);
+		pathbuf[i] = '\0';
+	}
+	len = strlen(buf);
 
+	do {
+		ret = fs_scan(pathbuf, &tmpfs_scan_pmo_cap, start);
+		if (ret < 0) {
+			printf("[Shell] No such directory\n");
+			return ret;
+		}
+
+		vp = (void*)TMPFS_SCAN_BUF_VADDR;
+		start += ret;
+		for (i = 0; i < ret; ++i) {
+			p = vp;
+			strcpy(strbuf, p->d_name);
+			if (strncmp(buf, strbuf, len) == 0) {
+				if (complement_time == 0) {
+					strcpy(complement, strbuf + len);
+					return 0;
+				}
+				--complement_time;
+			}
+			vp += p->d_reclen;
+		}
+	} while (ret != 0);
+
+	return -1;
 }
 
 extern char getch();
@@ -66,11 +110,31 @@ char *readline(const char *prompt)
 		c = getch();
 		if (c < 0)
 			return NULL;
-		usys_putc(c);
-		if (c == '\n')
-			break;
-		buf[i] = c;
-		++i;
+		else if (c == '\t') {
+			buf[i] = '\0';
+			if (complement_time == 0) {
+				j = i;
+				while (j > 0 && buf[j] != ' ')
+					--j;
+				if (buf[j] == ' ')
+					++j;
+			}
+
+			ret = do_complement(buf + j, complement, complement_time);
+			if (ret < 0)
+				break;
+
+			strcpy(buf + i, complement);
+			printf("\n%s%s", prompt, buf);
+			++complement_time;
+		} else {
+			complement_time = 0;
+			usys_putc(c);
+			if (c == '\n')
+				break;
+			buf[i] = c;
+			++i;
+		}
 	}
 	buf[i] = '\0';
 	return buf;

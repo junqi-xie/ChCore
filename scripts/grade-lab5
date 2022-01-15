@@ -88,8 +88,8 @@ def test_cat():
 
 @test(5, parent=test_shell_run)
 def test_auto_complement():
-    r.match("> yie.*ld_spin.bin")
-    r.match("> sp.*awn_basic.bin")
+    r.match("> bsd.*tar_windows.h")
+    r.match("> cmd.*line.c")
 
 @test(10, parent=test_shell_run)
 def test_run_executable():

@@ -9,7 +9,7 @@
 char getch()
 {
 	static int i = 0;
-	char *cmd1 = "echo ls tt yy \nyie\t\t\nsp\t\n";
+	char *cmd1 = "echo ls tt yy \nbsd\t\t\ncmd\t\n";
 	if (i == strlen(cmd1)) {
 		return -1;
 	}

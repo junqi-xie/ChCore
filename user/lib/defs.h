@@ -27,3 +27,4 @@
 #define ROUND_DOWN(x, n)	((x) & ~((n) - 1))
 
 #define PAGE_SIZE   0x1000
+#define SIZE_2M     0x200000

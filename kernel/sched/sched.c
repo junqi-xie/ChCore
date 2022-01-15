@@ -143,6 +143,11 @@ void sys_yield(void)
 	eret_to_thread(switch_context());
 }
 
+void sys_top(void)
+{
+	cur_sched_ops->sched_top();
+}
+
 int sched_init(struct sched_ops *sched_ops)
 {
 	BUG_ON(sched_ops == NULL);

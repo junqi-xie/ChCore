@@ -18,7 +18,10 @@ set(LINK_FLAGS "-static")
 
 include_directories(".")
 include_directories("..")
+include_directories("lib")
 
 add_subdirectory(lib)
 
 add_subdirectory(process)
+add_subdirectory(tmpfs)
+add_subdirectory(shell)

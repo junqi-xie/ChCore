@@ -22,8 +22,8 @@
 /* Description bits in page table entries. */
 
 /* Read-write permission. */
-#define AARCH64_PTE_AP_HIGH_RW_EL0_RW     (1)
-#define AARCH64_PTE_AP_HIGH_RO_EL0_RO     (3)
+#define AARCH64_PTE_AP_HIGH_RW            (0)
+#define AARCH64_PTE_AP_HIGH_RO            (2)
 
 /* X: execution permission. U: unprivileged. P: privileged. */
 #define AARCH64_PTE_UX                    (0)

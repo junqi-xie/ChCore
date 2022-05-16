@@ -10,7 +10,7 @@
 # Linker output
 *.ilk
 *.map
-*.exp
+# *.exp
 
 # Precompiled Headers
 *.gch
@@ -51,24 +51,18 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# CMake files
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-
 # ChCore Build Results
+!/**/firmware/*.bin
+!/**/firmware/*.elf
+
 *.img
 *.bin
 asm/
 tags/
-build/
-chcore.out
+_build
+_install
+.config*
+.*-config
+.build_log
+.build_stderr
 __pycache__

@@ -1,82 +1,79 @@
 /*
- * Copyright (c) 2020 Institute of Parallel And Distributed Systems (IPADS), Shanghai Jiao Tong University (SJTU)
- * OS-Lab-2020 (i.e., ChCore) is licensed under the Mulan PSL v1.
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
  * You can use this software according to the terms and conditions of the Mulan PSL v1.
  * You may obtain a copy of Mulan PSL v1 at:
- *   http://license.coscl.org.cn/MulanPSL
- *   THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
- *   IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
- *   PURPOSE.
- *   See the Mulan PSL v1 for more details.
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
  */
 
 #pragma once
 
-#define NR_SYSCALL   256
+#define NR_SYSCALL 256
 
-void sys_exit(void);
-void sys_create_pmo(void);
-void sys_map_pmo(void);
-void sys_handle_brk(void);
-/* lab3 syscalls finished */
+/* Character */
+#define SYS_putc 0
+#define SYS_getc 1
 
-void sys_yield(void);
-void sys_create_device_pmo(void);
-void sys_create_thread(void);
-void sys_create_process(void);
-void sys_cap_copy_to(void);
-void sys_cap_copy_from(void);
-void sys_unmap_pmo(void);
-void sys_set_affinity(void);
-void sys_get_affinity(void);
+/* PMO */
+/* - single */
+#define SYS_create_pmo        10
+#define SYS_create_device_pmo 11
+#define SYS_map_pmo           12
+#define SYS_unmap_pmo         13
+#define SYS_write_pmo         14
+#define SYS_read_pmo          15
+/* - batch */
+#define SYS_create_pmos 20
+#define SYS_map_pmos    21
+/* - address translation */
+#define SYS_get_pmo_paddr 30
+#define SYS_get_phys_addr 31
 
-void sys_create_pmos(void);
-void sys_map_pmos(void);
-void sys_write_pmo(void);
-void sys_transfer_caps(void);
-void sys_read_pmo(void);
+/* Capability */
+#define SYS_cap_copy_to   60
+#define SYS_cap_copy_from 61
+#define SYS_transfer_caps 62
 
-void sys_register_server(void);
-void sys_register_client(void);
-void sys_ipc_call(void);
-void sys_ipc_reg_call(void);
-void sys_ipc_return(void);
+/* Multitask */
+/* - create & exit */
+#define SYS_create_cap_group 80
+#define SYS_create_thread    82
+#define SYS_thread_exit      83
+/* - schedule */
+#define SYS_yield        100
+#define SYS_set_affinity 101
+#define SYS_get_affinity 102
+#define SYS_get_cpu_id   103
 
-void sys_top(void);
+/* IPC */
+/* - procedure call */
+#define SYS_register_server 120
+#define SYS_register_client 121
+#define SYS_ipc_call        122
+#define SYS_ipc_return      123
 
-#define SYS_putc				0
-#define SYS_getc				1
-#define SYS_yield				2
-#define SYS_exit				3
-#define SYS_sleep				4
-#define SYS_create_pmo				5
-#define SYS_map_pmo				6
-#define SYS_create_thread			7
-#define SYS_create_process			8
-#define SYS_register_server			9
-#define SYS_register_client			10
-#define SYS_get_conn_stack			11
-#define SYS_ipc_call				12
-#define SYS_ipc_return				13
-#define SYS_cap_copy_to				15
-#define SYS_cap_copy_from			16
-#define SYS_unmap_pmo				17
-#define SYS_set_affinity                        18
-#define SYS_get_affinity                        19
-#define SYS_create_device_pmo			20
+/* Hardware Access (Privileged Instruction) */
+/* - cache */
+#define SYS_cache_flush 180
+/* - timer */
+#define SYS_get_current_tick 185
 
-/* Lab4 specfic */
-#define SYS_get_cpu_id                          50
-#define SYS_ipc_reg_call                        51
+/* POSIX */
+/* - time */
+#define SYS_clock_gettime 200
+/* - memory */
+#define SYS_handle_brk    210
+#define SYS_handle_mmap   211
+#define SYS_handle_munmap 212
 
-#define SYS_create_pmos                         101
-#define SYS_map_pmos                            102
-#define SYS_write_pmo                           103
-#define SYS_read_pmo				104
-#define SYS_transfer_caps                       105
+/* Debug */
+#define SYS_top               221
+#define SYS_get_free_mem_size 222
 
-#define SYS_handle_brk				201
-
-#define SYS_top                                 252
-#define SYS_fs_load_cpio			253
-#define SYS_debug			        255
+/* Performance Benchmark */
+#define SYS_perf_start 230
+#define SYS_perf_end   231

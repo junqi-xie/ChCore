@@ -1,101 +1,82 @@
 /*
- * Copyright (c) 2020 Institute of Parallel And Distributed Systems (IPADS), Shanghai Jiao Tong University (SJTU)
- * OS-Lab-2020 (i.e., ChCore) is licensed under the Mulan PSL v1.
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
  * You can use this software according to the terms and conditions of the Mulan PSL v1.
  * You may obtain a copy of Mulan PSL v1 at:
- *   http://license.coscl.org.cn/MulanPSL
- *   THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
- *   IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
- *   PURPOSE.
- *   See the Mulan PSL v1 for more details.
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
  */
 
-#include <common/mm.h>
+#include <mm/mm.h>
+#include <mm/mm_check.h>
 #include <common/kprint.h>
 #include <common/macro.h>
+#include <mm/buddy.h>
+#include <mm/slab.h>
 
-#include "buddy.h"
-#include "slab.h"
+extern void parse_mem_map(void);
 
-extern unsigned long *img_end;
-
-#define PHYSICAL_MEM_START (24*1024*1024)	//24M
-
-#define START_VADDR phys_to_virt(PHYSICAL_MEM_START)	//24M
-#define NPAGES (128*1000)
-
-#define PHYSICAL_MEM_END (PHYSICAL_MEM_START+NPAGES*BUDDY_PAGE_SIZE)
+/* On raspi3, the size of physical memory pool only need to be 1 */
+#define PHYS_MEM_POOL_SIZE 1
+struct phys_mem_pool global_mem[PHYS_MEM_POOL_SIZE];
+int physmem_map_num;
+u64 physmem_map[PHYS_MEM_POOL_SIZE][2]; /* [start, end) */
 
 /*
  * Layout:
  *
- * | metadata (npages * sizeof(struct page)) | start_vaddr ... (npages * PAGE_SIZE) |
+ * | metadata (npages * sizeof(struct page)) | start_vaddr ... (npages *
+ * PAGE_SIZE) |
  *
  */
-
-unsigned long get_ttbr1(void)
-{
-	unsigned long pgd;
-
-	__asm__("mrs %0,ttbr1_el1":"=r"(pgd));
-	return pgd;
-}
-
-/*
- * map_kernel_space: map the kernel virtual address
- * [va:va+size] to physical addres [pa:pa+size].
- * 1. get the kernel pgd address
- * 2. fill the block entry with corresponding attribution bit
- *
- */
-void map_kernel_space(vaddr_t va, paddr_t pa, size_t len)
-{
-	vaddr_t *pgtbl = (vaddr_t *)phys_to_virt(get_ttbr1());
-	map_range_in_pgtbl_hugepage(pgtbl, va, pa, len, KERNEL_PT | VMR_WRITE);
-}
-
-void kernel_space_check(void)
-{
-	unsigned long kernel_val;
-	for (unsigned long i = 128; i < 256; i++) {
-		kernel_val = *(unsigned long *)(KBASE + (i << 21));
-		kinfo("kernel_val: %lx\n", kernel_val);
-	}
-	kinfo("kernel space check pass\n");
-}
-
-struct phys_mem_pool global_mem;
 
 void mm_init(void)
 {
-	vaddr_t free_mem_start = 0;
-	struct page *page_meta_start = NULL;
-	u64 npages = 0;
-	u64 start_vaddr = 0;
+        vaddr_t free_mem_start = 0;
+        vaddr_t free_mem_end = 0;
+        struct page *page_meta_start = NULL;
+        u64 npages = 0;
+        u64 start_vaddr = 0;
 
-	free_mem_start =
-	    phys_to_virt(ROUND_UP((vaddr_t) (&img_end), PAGE_SIZE));
-	npages = NPAGES;
-	start_vaddr = START_VADDR;
-	kdebug("[CHCORE] mm: free_mem_start is 0x%lx, free_mem_end is 0x%lx\n",
-	       free_mem_start, phys_to_virt(PHYSICAL_MEM_END));
+        physmem_map_num = 0;
+        parse_mem_map();
 
-	if ((free_mem_start + npages * sizeof(struct page)) > start_vaddr) {
-		BUG("kernel panic: init_mm metadata is too large!\n");
-	}
+        if (physmem_map_num == 1) {
+                free_mem_start = phys_to_virt(physmem_map[0][0]);
+                free_mem_end = phys_to_virt(physmem_map[0][1]);
 
-	page_meta_start = (struct page *)free_mem_start;
-	kdebug("page_meta_start: 0x%lx, real_start_vadd: 0x%lx,"
-	       "npages: 0x%lx, meta_page_size: 0x%lx\n",
-	       page_meta_start, start_vaddr, npages, sizeof(struct page));
+                npages = (free_mem_end - free_mem_start)
+                         / (PAGE_SIZE + sizeof(struct page));
+                start_vaddr =
+                        ROUND_UP(free_mem_start + npages * sizeof(struct page),
+                                 PAGE_SIZE);
+                kdebug("[CHCORE] mm: free_mem_start is 0x%lx, free_mem_end is 0x%lx\n",
+                       free_mem_start,
+                       free_mem_end);
 
-	/* buddy alloctor for managing physical memory */
-	init_buddy(&global_mem, page_meta_start, start_vaddr, npages);
+                page_meta_start = (struct page *)free_mem_start;
+                kdebug("page_meta_start: 0x%lx, real_start_vaddr: 0x%lx\n"
+                       "npages: 0x%lx, page_meta_size: 0x%lx\n",
+                       page_meta_start,
+                       start_vaddr,
+                       npages,
+                       sizeof(struct page));
 
-	/* slab alloctor for allocating small memory regions */
-	init_slab();
+                /* buddy alloctor for managing physical memory */
+                init_buddy(
+                        &global_mem[0], page_meta_start, start_vaddr, npages);
+        } else {
+                BUG("Unsupported physmem_map_num\n");
+        }
 
-	map_kernel_space(KBASE + (128UL << 21), 128UL << 21, 128UL << 21);
-	//check whether kernel space [KABSE + 256 : KBASE + 512] is mapped 
-	// kernel_space_check();
+#ifdef CHCORE_KERNEL_TEST
+        void test_buddy(void);
+        test_buddy();
+#endif /* CHCORE_KERNEL_TEST */
+
+        /* slab alloctor for allocating small memory regions */
+        init_slab();
 }

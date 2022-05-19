@@ -61,6 +61,7 @@ target_include_directories(
 add_subdirectory(arch/${CHCORE_ARCH})
 add_subdirectory(arch/${CHCORE_ARCH}/plat/${CHCORE_PLAT})
 add_subdirectory(ipc)
+add_subdirectory(semaphore)
 add_subdirectory(irq)
 add_subdirectory(lib)
 add_subdirectory(mm)

@@ -29,6 +29,7 @@ extern struct thread *current_threads[PLAT_CPU_NUM];
 struct thread {
         struct list_head node; // link threads in a same cap_group
         struct list_head ready_queue_node; // link threads in a ready queue
+        struct list_head sem_queue_node; // semaphore list
         struct thread_ctx *thread_ctx; // thread control block
 
         /*

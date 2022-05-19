@@ -75,3 +75,8 @@
 /* Performance Benchmark */
 #define __CHCORE_SYS_perf_start 230
 #define __CHCORE_SYS_perf_end   231
+
+/* Semaphore */
+#define __CHCORE_SYS_create_sem 250
+#define __CHCORE_SYS_wait_sem   251
+#define __CHCORE_SYS_signal_sem 252

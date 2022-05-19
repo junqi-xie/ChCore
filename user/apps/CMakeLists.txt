@@ -6,6 +6,7 @@ add_executable(putget.bin putget.c)
 
 add_executable(user.bin user.c)
 add_executable(ipc_client.bin ipc_client.c)
+add_executable(mutex.bin mutex.c)
 add_executable(semaphore.bin semaphore.c)
 add_executable(prodcons.bin prodcons.c)
 add_executable(yield_single.bin yield_single.c)

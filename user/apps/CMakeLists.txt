@@ -15,6 +15,7 @@ add_executable(yield_spin.bin yield_spin.c)
 chcore_install_all_targets()
 
 add_executable(helloworld.bin hello.c)
+add_executable(stdio.bin stdio.c)
 
 chcore_copy_all_targets_to_ramdisk()
 chcore_copy_files_to_ramdisk(test.txt)

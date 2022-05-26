@@ -78,4 +78,8 @@ void shell_test()
         for (int i = 0; i < 10000; i++) {
                 __chcore_sys_yield();
         }
+        run_cmd("/stdio.bin");
+        for (int i = 0; i < 10000 * 5; i++) {
+                __chcore_sys_yield();
+        }
 }

@@ -59,10 +59,12 @@ dkms.conf
 *.bin
 asm/
 tags/
+build/
 _build
 _install
 .config*
 .*-config
 .build_log
 .build_stderr
+.vscode
 __pycache__

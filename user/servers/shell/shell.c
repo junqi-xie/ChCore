@@ -10,17 +10,17 @@
  * See the Mulan PSL v1 for more details.
  */
 
-#include <malloc.h>
-#include <stdio.h>
-#include <chcore/fs/defs.h>
-#include <chcore/ipc.h>
-#include <string.h>
-#include <chcore/internal/raw_syscall.h>
 #include <chcore/assert.h>
+#include <chcore/ipc.h>
 #include <chcore/procm.h>
 #include <chcore/thread.h>
-#include <chcore/internal/server_caps.h>
+#include <chcore/fs/defs.h>
 #include <chcore/tmpfs.h>
+#include <chcore/internal/raw_syscall.h>
+#include <chcore/internal/server_caps.h>
+#include <malloc.h>
+#include <stdio.h>
+#include <string.h>
 
 #define SERVER_READY_FLAG(vaddr) (*(int *)(vaddr))
 #define SERVER_EXIT_FLAG(vaddr)  (*(int *)((u64)vaddr + 4))
@@ -39,7 +39,10 @@ static void get_path(char *pathbuf, char *cmdline)
                 cmdline++;
         if (*cmdline != '/')
                 strcpy(pathbuf, path);
-        strcat(pathbuf, cmdline);
+        if (*cmdline != '\0')
+                strcat(pathbuf, cmdline);
+        else if (strlen(pathbuf) != 1)
+                pathbuf[strlen(pathbuf) - 1] = '\0';
 }
 
 /* Retrieve the entry name from one dirent */
@@ -76,11 +79,6 @@ int do_complement(char *buf, char *complement, int complement_time)
 
         int fd = alloc_fd();
         ret = fs_open(pathbuf, fd, O_RDONLY);
-        if (ret < 0) {
-                printf("[Shell] No such directory\n");
-                return ret;
-        }
-
         ret = fs_getdents(fd, BUFLEN, scan_buf);
         for (i = 0; i < ret; i += p->d_reclen) {
                 p = (struct dirent *)(scan_buf + i);
@@ -93,7 +91,7 @@ int do_complement(char *buf, char *complement, int complement_time)
                         --complement_time;
                 }
         }
-
+        ret = fs_close(fd);
         return -1;
 }
 
@@ -112,9 +110,8 @@ char *readline(const char *prompt)
         char complement[BUFLEN];
         int complement_time = 0;
 
-        if (prompt != NULL) {
+        if (prompt != NULL)
                 printf("%s", prompt);
-        }
         complement[0] = '\0';
 
         while (1) {
@@ -147,10 +144,8 @@ char *readline(const char *prompt)
                                 complement[0] = '\0';
                         }
                         putc(c);
-                        if (c == '\r' || c == '\n') {
-                                putc('\n');
+                        if (c == '\r' || c == '\n')
                                 break;
-                        }
                         buf[i++] = c;
                 }
         }
@@ -170,12 +165,6 @@ int do_cd(char *cmdline)
                 strcat(path, "/");
         } else
                 strcpy(path, cmdline);
-        return 0;
-}
-
-int do_top()
-{
-        __chcore_sys_top();
         return 0;
 }
 
@@ -199,15 +188,19 @@ int do_ls(char *cmdline)
         }
 
         ret = fs_getdents(fd, BUFLEN, scan_buf);
+        if (ret < 0) {
+                printf("[Shell] Not a directory\n");
+                return ret;
+        }
         for (i = 0; i < ret; i += p->d_reclen) {
                 p = (struct dirent *)(scan_buf + i);
                 get_dent_name(p, name);
-                if (*name != '.') {
+                if (*name != '.')
                         printf("%s ", name);
-                }
         }
+        printf("\n");
         ret = fs_close(fd);
-        return 0;
+        return ret;
 }
 
 int do_cat(char *cmdline)
@@ -229,15 +222,12 @@ int do_cat(char *cmdline)
         }
         ret = fs_read(file_fd, file_size, buf);
         if (ret < 0) {
-                printf("[Shell] Read file failed\n");
+                printf("[Shell] Permission denied\n");
                 return ret;
         }
         printf("%s", buf);
         ret = fs_close(file_fd);
-        if (ret < 0) {
-                return ret;
-        }
-        return 0;
+        return ret;
 }
 
 int do_echo(char *cmdline)
@@ -246,6 +236,12 @@ int do_echo(char *cmdline)
         while (*cmdline == ' ')
                 cmdline++;
         printf("%s", cmdline);
+        return 0;
+}
+
+int do_top()
+{
+        __chcore_sys_top();
         return 0;
 }
 

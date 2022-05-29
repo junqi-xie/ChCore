@@ -203,6 +203,24 @@ int do_ls(char *cmdline)
         return ret;
 }
 
+int do_touch(char *cmdline)
+{
+        int ret;
+        char pathbuf[BUFLEN];
+
+        cmdline += 5;
+        get_path(pathbuf, cmdline);
+
+        int fd = alloc_fd();
+        ret = fs_open(pathbuf, fd, O_CREAT);
+        if (ret == -ENOENT) {
+                ret = fs_creat(pathbuf);
+                return ret;
+        }
+        ret = fs_close(fd);
+        return ret;
+}
+
 int do_cat(char *cmdline)
 {
         int ret;
@@ -269,11 +287,14 @@ int builtin_cmd(char *cmdline)
         } else if (!strcmp(cmd, "ls")) {
                 ret = do_ls(cmdline);
                 return !ret ? 1 : -1;
-        } else if (!strcmp(cmd, "echo")) {
-                ret = do_echo(cmdline);
+        } else if (!strcmp(cmd, "touch")) {
+                ret = do_touch(cmdline);
                 return !ret ? 1 : -1;
         } else if (!strcmp(cmd, "cat")) {
                 ret = do_cat(cmdline);
+                return !ret ? 1 : -1;
+        } else if (!strcmp(cmd, "echo")) {
+                ret = do_echo(cmdline);
                 return !ret ? 1 : -1;
         } else if (!strcmp(cmd, "clear")) {
                 do_clear();

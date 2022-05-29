@@ -26,7 +26,9 @@ int fs_read(int fd, size_t size, char *buf);
 int fs_write(int fd, size_t size, const char *buf);
 int fs_close(int fd);
 int fs_creat(const char *path);
-
+int fs_unlink(const char *path);
+int fs_mkdir(const char *path);
+int fs_rmdir(const char *path);
 int fs_getdents(int fd, size_t size, char *buf);
 int fs_getsize(const char *path);
 

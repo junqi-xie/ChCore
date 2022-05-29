@@ -168,6 +168,25 @@ int do_cd(char *cmdline)
         return 0;
 }
 
+int do_mkdir(char *cmdline)
+{
+        int ret;
+        char pathbuf[BUFLEN];
+
+        cmdline += 5;
+        get_path(pathbuf, cmdline);
+
+        int fd = alloc_fd();
+        ret = fs_open(pathbuf, fd, O_CREAT);
+        if (ret == -ENOENT) {
+                ret = fs_mkdir(pathbuf);
+                return ret;
+        } else
+                printf("[Shell] File exists\n");
+        ret = fs_close(fd);
+        return ret;
+}
+
 int do_ls(char *cmdline)
 {
         int ret;
@@ -248,6 +267,24 @@ int do_cat(char *cmdline)
         return ret;
 }
 
+int do_rm(char *cmdline)
+{
+        int ret;
+        char pathbuf[BUFLEN];
+
+        cmdline += 2;
+        while (*cmdline == ' ')
+                cmdline++;
+        get_path(pathbuf, cmdline);
+        ret = fs_unlink(pathbuf);
+
+        if (ret == -ENOENT)
+                printf("[Shell] No such file\n");
+        else if (ret == -ENOTEMPTY)
+                printf("[Shell] Directory not empty\n");
+        return ret;
+}
+
 int do_echo(char *cmdline)
 {
         cmdline += 4;
@@ -284,6 +321,9 @@ int builtin_cmd(char *cmdline)
         } else if (!strcmp(cmd, "cd")) {
                 ret = do_cd(cmdline);
                 return !ret ? 1 : -1;
+        } else if (!strcmp(cmd, "mkdir")) {
+                ret = do_mkdir(cmdline);
+                return !ret ? 1 : -1;
         } else if (!strcmp(cmd, "ls")) {
                 ret = do_ls(cmdline);
                 return !ret ? 1 : -1;
@@ -292,6 +332,9 @@ int builtin_cmd(char *cmdline)
                 return !ret ? 1 : -1;
         } else if (!strcmp(cmd, "cat")) {
                 ret = do_cat(cmdline);
+                return !ret ? 1 : -1;
+        } else if (!strcmp(cmd, "rm")) {
+                ret = do_rm(cmdline);
                 return !ret ? 1 : -1;
         } else if (!strcmp(cmd, "echo")) {
                 ret = do_echo(cmdline);

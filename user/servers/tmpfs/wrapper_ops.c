@@ -292,8 +292,6 @@ int fs_wrapper_unlink(struct ipc_msg *ipc_msg, struct fs_request *fr)
 {
         char *path = fr->unlink.pathname;
         int flags = fr->unlink.flags;
-        int ret;
-        struct fs_vnode *vnode;
 
         return server_ops.unlink(path, flags);
 }

@@ -18,7 +18,7 @@ void connect_fs(void);
 // put the commond in `buf` and return `buf`
 char *readline(const char *prompt);
 
-// run `ls`, `echo`, `cat`, `cd`, `top`
+// run `cd`, `mkdir`, `ls`, `touch`, `cat`, `rm`, `echo`, `clear`, `top`
 // return true if `cmdline` is a builtin command
 int builtin_cmd(char *cmdline);
 

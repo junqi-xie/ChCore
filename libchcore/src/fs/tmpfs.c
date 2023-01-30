@@ -125,6 +125,45 @@ int fs_creat(const char *path)
         return ret;
 }
 
+int fs_unlink(const char *path)
+{
+        struct ipc_msg *ipc_msg =
+                ipc_create_msg(tmpfs_ipc_struct, sizeof(struct fs_request), 0);
+        chcore_assert(ipc_msg);
+        struct fs_request *fr = (struct fs_request *)ipc_get_msg_data(ipc_msg);
+        fr->req = FS_REQ_UNLINK;
+        strcpy(fr->unlink.pathname, path);
+        int ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+        ipc_destroy_msg(tmpfs_ipc_struct, ipc_msg);
+        return ret;
+}
+
+int fs_mkdir(const char *path)
+{
+        struct ipc_msg *ipc_msg =
+                ipc_create_msg(tmpfs_ipc_struct, sizeof(struct fs_request), 0);
+        chcore_assert(ipc_msg);
+        struct fs_request *fr = (struct fs_request *)ipc_get_msg_data(ipc_msg);
+        fr->req = FS_REQ_MKDIR;
+        strcpy(fr->mkdir.pathname, path);
+        int ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+        ipc_destroy_msg(tmpfs_ipc_struct, ipc_msg);
+        return ret;
+}
+
+int fs_rmdir(const char *path)
+{
+        struct ipc_msg *ipc_msg =
+                ipc_create_msg(tmpfs_ipc_struct, sizeof(struct fs_request), 0);
+        chcore_assert(ipc_msg);
+        struct fs_request *fr = (struct fs_request *)ipc_get_msg_data(ipc_msg);
+        fr->req = FS_REQ_RMDIR;
+        strcpy(fr->rmdir.pathname, path);
+        int ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+        ipc_destroy_msg(tmpfs_ipc_struct, ipc_msg);
+        return ret;
+}
+
 int fs_getdents(int fd, size_t size, char *buf)
 {
         struct ipc_msg *ipc_msg =

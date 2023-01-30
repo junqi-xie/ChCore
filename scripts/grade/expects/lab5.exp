@@ -65,7 +65,7 @@ expect {
         lset scores {4 1} [lindex $scores {4 2}]
         exp_continue -continue_timer
     }
-    "SHELL helloworld.bin test.txt" {
+    "SHELL helloworld.bin stdio.bin test.txt" {
         lset scores {5 1} [lindex $scores {5 2}]
         exp_continue -continue_timer
     }
@@ -87,6 +87,7 @@ expect {
         send -- "\t"
         expect {
             "helloworld.bin" {send -- "\t"; exp_continue -continue_timer}
+            "stdio.bin" { send -- "\t"; exp_continue -continue_timer}
             "test.txt" {lset scores {8 1} [lindex $scores {8 2}];}
             -timeout 2
         } 

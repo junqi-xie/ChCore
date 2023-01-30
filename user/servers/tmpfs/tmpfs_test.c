@@ -131,9 +131,10 @@ int test_unlink()
 int test_tfs_load_image()
 {
         tfs_load_image(&__binary_ramdisk_cpio_start);
+        struct inode *inode1 = tfs_open_path("/stdio.bin");
         struct inode *inode2 = tfs_open_path("/helloworld.bin");
         struct inode *inode3 = tfs_open_path("/test.txt");
-        if (!inode2 || !inode3 || (inode3 && inode3->size != 11)) {
+        if (!inode1 || !inode2 || !inode3 || (inode3 && inode3->size != 11)) {
                 return -1;
         }
         return 0;

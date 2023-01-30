@@ -19,3 +19,14 @@
 #define cgetc  chcore_console_getc
 #define putc   chcore_console_putc
 #define getc   chcore_console_getc
+
+typedef struct FILE {
+        int fd;
+        int mode;
+} FILE;
+
+FILE *fopen(const char *filename, const char *mode);
+int fprintf(FILE *f, const char *fmt, ...);
+size_t fwrite(const void *src, size_t size, size_t nmemb, FILE *f);
+size_t fread(void *dst, size_t size, size_t nmemb, FILE *f);
+int fclose(FILE *f);

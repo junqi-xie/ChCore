@@ -1,27 +1,54 @@
 cmake_minimum_required(VERSION 3.14)
+project(ChCoreUser C ASM)
 
-project(user C ASM)
+include(CommonTools)
+include(UserTools)
 
-set(CROSS_COMPILE "aarch64-linux-gnu-")
+set(_libchcore_install_dir ${CMAKE_CURRENT_SOURCE_DIR}/../libchcore/_install)
 
-set(CMAKE_C_COMPILER "${CROSS_COMPILE}gcc")
-set(CMAKE_ASM_COMPILER "${CROSS_COMPILE}gcc")
+add_compile_options(-fPIE -nostdinc -ffreestanding)
+include_directories(${_libchcore_install_dir}/include
+                    ${_libchcore_install_dir}/include/libc)
+add_link_options(-static -no-pie -nostdlib -nostartfiles -e _start)
+link_libraries(${_libchcore_install_dir}/lib/crt0.o
+               ${_libchcore_install_dir}/lib/libchcore.a)
 
-set(C_COMPILER_NOSTDINC "-nostdinc -nostdlib -nostartfiles")
+set(_ramdisk_dir ${CMAKE_CURRENT_BINARY_DIR}/ramdisk)
+file(REMOVE_RECURSE ${_ramdisk_dir})
+file(MAKE_DIRECTORY ${_ramdisk_dir})
+add_custom_target(
+    ramdisk.cpio ALL
+    WORKING_DIRECTORY ${_ramdisk_dir}
+    COMMAND find . | cpio -o -H newc > ${CMAKE_CURRENT_BINARY_DIR}/ramdisk.cpio)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
-    ${C_COMPILER_NOSTDINC}")
+function(chcore_copy_files_to_ramdisk)
+    file(COPY ${ARGN} DESTINATION ${_ramdisk_dir})
+endfunction()
 
-message(${CMAKE_C_FLAGS})
+function(chcore_copy_target_to_ramdisk _target)
+    add_custom_command(
+        TARGET ${_target}
+        POST_BUILD
+        COMMAND cp $<TARGET_FILE:${_target}> ${_ramdisk_dir})
+    add_dependencies(ramdisk.cpio ${_target})
+    set_property(GLOBAL PROPERTY ${_target}_INSTALLED TRUE)
+endfunction()
 
-set(LINK_FLAGS "-static")
+function(chcore_copy_all_targets_to_ramdisk)
+    set(_targets)
+    chcore_get_all_targets(_targets)
+    foreach(_target ${_targets})
+        get_property(_installed GLOBAL PROPERTY ${_target}_INSTALLED)
+        if(${_installed})
+            continue()
+        endif()
+        get_target_property(_target_type ${_target} TYPE)
+        if(${_target_type} STREQUAL SHARED_LIBRARY OR ${_target_type} STREQUAL
+                                                      EXECUTABLE)
+            chcore_copy_target_to_ramdisk(${_target})
+        endif()
+    endforeach()
+endfunction()
 
-include_directories(".")
-include_directories("..")
-include_directories("lib")
-
-add_subdirectory(lib)
-
-add_subdirectory(process)
-add_subdirectory(tmpfs)
-add_subdirectory(shell)
+add_subdirectory(servers)
+add_subdirectory(apps)

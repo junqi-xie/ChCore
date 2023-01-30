@@ -1,69 +1,67 @@
-#include <common/smp.h>
+/*
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ */
+
+#include <common/lock.h>
 #include <common/kprint.h>
+#include <arch/machine/smp.h>
 #include <common/macro.h>
-#include <common/kmalloc.h>
+#include <mm/kmalloc.h>
 
-#include <tests/tests.h>
+#include "tests.h"
+#include "barrier.h"
 
-#define LOCK_TEST_NUM 100000
+#define LOCK_TEST_NUM 1000000
+
+volatile int mutex_start_flag = 0;
+volatile int mutex_finish_flag = 0;
 
 /* Mutex test count */
-struct lock test_lock;
 unsigned long mutex_test_count = 0;
-unsigned long big_lock_test_count = 0;
 
-void tst_mutex(bool is_bsp)
+void tst_mutex(void)
 {
-	global_barrier(is_bsp);
+        /* ============ Start Barrier ============ */
+        lock_kernel();
+        mutex_start_flag++;
+        unlock_kernel();
+        while (mutex_start_flag != PLAT_CPU_NUM)
+                ;
+        /* ============ Start Barrier ============ */
 
-	/* Mutex Lock */
-	for (int i = 0; i < LOCK_TEST_NUM; i++) {
-		if (i % 2)
-			while (try_lock(&test_lock) != 0) ;
-		else
-			lock(&test_lock);
-		/* Critical Section */
-		mutex_test_count++;
-		unlock(&test_lock);
-	}
+        /* Mutex Lock */
+        for (int i = 0; i < LOCK_TEST_NUM; i++) {
+                if (i % 2)
+                        while (try_lock(&big_kernel_lock) != 0)
+                                ;
+                else
+                        lock_kernel();
+                /* Critical Section */
+                mutex_test_count++;
+                unlock_kernel();
+        }
 
-	global_barrier(is_bsp);
-	BUG_ON(mutex_test_count != PLAT_CPU_NUM * LOCK_TEST_NUM);
-	global_barrier(is_bsp);
-	if (is_bsp) {
-		printk("pass tst_mutex\n");
-	}
-}
+        /* ============ Finish Barrier ============ */
+        lock_kernel();
+        mutex_finish_flag++;
+        unlock_kernel();
+        while (mutex_finish_flag != PLAT_CPU_NUM)
+                ;
+        /* ============ Finish Barrier ============ */
 
-void tst_big_lock(bool is_bsp)
-{
-	int i;
-
-	if (is_bsp) {
-		big_lock_test_count = 0;
-		BUG_ON(!is_locked(&big_kernel_lock));
-		unlock_kernel();
-	}
-	// kinfo("CPU%u 1-1\n", cpu_id);
-	global_barrier(is_bsp);
-
-	for (i = 0; i < LOCK_TEST_NUM; ++i) {
-		if (i % 2)
-			while (try_lock(&big_kernel_lock) != 0) ;
-		else
-			lock_kernel();
-		big_lock_test_count += 1;
-		unlock_kernel();
-		// if (i % 100 == 1)
-		//      kinfo("pri:%d\n", i);
-	}
-
-	// kinfo("CPU%u 1-2\n", cpu_id);
-	global_barrier(is_bsp);
-	BUG_ON(LOCK_TEST_NUM * PLAT_CPU_NUM != big_lock_test_count);
-	global_barrier(is_bsp);
-	if (is_bsp) {
-		lock_kernel();
-		printk("pass tst_big_lock\n");
-	}
+        /* Check */
+        BUG_ON(mutex_test_count != PLAT_CPU_NUM * LOCK_TEST_NUM);
+        if (smp_get_cpu_id() == 0) {
+                lock_kernel();
+                kinfo("Pass tst_mutex!\n");
+                unlock_kernel();
+        }
 }

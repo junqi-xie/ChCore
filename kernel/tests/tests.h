@@ -1,23 +1,23 @@
-#pragma once
+/*
+ * Copyright (c) 2022 Institute of Parallel And Distributed Systems (IPADS)
+ * ChCore-Lab is licensed under the Mulan PSL v1.
+ * You can use this software according to the terms and conditions of the Mulan PSL v1.
+ * You may obtain a copy of Mulan PSL v1 at:
+ *     http://license.coscl.org.cn/MulanPSL
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
+ * PURPOSE.
+ * See the Mulan PSL v1 for more details.
+ */
 
-#include <common/lock.h>
-#include <tests/barrier.h>
+#pragma once
 
 extern struct lock test_lock;
 
-void init_test(void);
-void run_test(bool);
-
-/**
- * Locking
- */
-void tst_mutex(bool);
-void tst_big_lock(bool);
-
-/**
- * Scheduler
- */
-void tst_sched_cooperative(bool);
-void tst_sched_preemptive(bool);
-void tst_sched_affinity(bool);
-void tst_sched(bool);
+void tst_mutex(void);
+void tst_sched_cooperative(void);
+void tst_sched_preemptive(void);
+void tst_sched_affinity(void);
+void tst_sched(void);
+void tst_malloc(void);
+void tst_sched(void);

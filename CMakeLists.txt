@@ -1,112 +1,136 @@
-cmake_minimum_required (VERSION 3.14)
+cmake_minimum_required(VERSION 3.14)
+project(ChCore)
 
-set(CMAKE_VERBOSE_MAKEFILE on)
+set(_cmake_script_dir ${CMAKE_CURRENT_SOURCE_DIR}/scripts/build/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${_cmake_script_dir}/Modules)
 
-set(CMAKE_BUILD_TYPE "Release")  # "Release" or "Debug"
-set(CHCORE_PLAT "raspi3")
-set(CHCORE_ARCH "aarch64")
+include(SubProject)
+include(CommonTools)
 
-mark_as_advanced(CMAKE_INSTALL_PREFIX)
+chcore_dump_chcore_vars()
 
-if(TEST)
-    add_definitions("-DTEST=${TEST}")
+chcore_get_nproc(_nproc)
+
+if(CHCORE_VERBOSE_BUILD)
+    set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions("-DLOG_LEVEL=2")
-else ()
-    add_definitions("-DLOG_LEVEL=1")
-endif ()
+set(_common_args
+    -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
+    -DCHCORE_PROJECT_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+    -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE})
 
-set(CROSS_COMPILE "${CHCORE_ARCH}-linux-gnu-")
+# Construct cache args list for subprojects (kernel, libchcore, etc)
+macro(chcore_config _config_name _config_type _default _description)
+    if(NOT DEFINED ${_config_name})
+        message(
+            FATAL_ERROR
+                "Do not run CMake command directly, use `./chbuild` instead")
+    endif()
+    list(APPEND _cache_args
+         -D${_config_name}:${_config_type}=${${_config_name}})
+endmacro()
+include(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
 
-set(CMAKE_C_COMPILER "${CROSS_COMPILE}gcc")
-set(CMAKE_ASM_COMPILER "${CROSS_COMPILE}gcc")
-execute_process (
-	COMMAND  ${CMAKE_C_COMPILER} -print-file-name=include
-	OUTPUT_STRIP_TRAILING_WHITESPACE
-	OUTPUT_VARIABLE C_COMPILER_INCLUDE
-)
+# --- LibChCore ---
 
+set(_libchcore_source_dir ${CMAKE_CURRENT_SOURCE_DIR}/libchcore)
+set(_libchcore_build_dir ${_libchcore_source_dir}/_build)
+set(_libchcore_install_dir ${_libchcore_source_dir}/_install)
 
-set(CMAKE_C_FLAGS
-    "-Wall -fPIC -nostdlib -nostartfiles -ffreestanding \
-    -DCHCORE -nostdinc ")
+# Main targets for LibChCore
+chcore_add_subproject(
+    libchcore
+    SOURCE_DIR ${_libchcore_source_dir}
+    BINARY_DIR ${_libchcore_build_dir}
+    INSTALL_DIR ${_libchcore_install_dir}
+    CMAKE_ARGS
+        ${_common_args}
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TOOLCHAIN_FILE=${_cmake_script_dir}/Toolchains/user.cmake
+    CMAKE_CACHE_ARGS ${_cache_args}
+    BUILD_ALWAYS TRUE)
 
-project (chos C ASM)
+# Clean target for LibChCore
+add_custom_target(
+    libchcore-clean
+    COMMAND /bin/rm -rf ${_libchcore_build_dir}
+    COMMAND /bin/rm -rf ${_libchcore_install_dir})
 
-set(BOOTLOADER_PATH     "boot")
-set(KERNEL_PATH         "${CMAKE_CURRENT_SOURCE_DIR}/kernel")
-set(USER_PATH           "${CMAKE_CURRENT_SOURCE_DIR}/user")
+# --- User ---
 
+set(_user_source_dir ${CMAKE_CURRENT_SOURCE_DIR}/user)
+set(_user_build_dir ${_user_source_dir}/_build)
+set(_user_install_dir ${_user_source_dir}/_install)
 
-set(KERNEL_ARCH_PATH        "${KERNEL_PATH}")
-set(KERNEL_MM_PATH          "${KERNEL_PATH}/mm")
-set(KERNEL_SYSCALL_PATH     "${KERNEL_PATH}/syscall")
-set(KERNEL_EXCEPTION_PATH   "${KERNEL_PATH}/exception")
-set(KERNEL_PROCESS_PATH     "${KERNEL_PATH}/process")
-set(KERNEL_SCHED_PATH       "${KERNEL_PATH}/sched")
-set(KERNEL_IPC_PATH         "${KERNEL_PATH}/ipc")
-set(KERNEL_TESTS_PATH       "${KERNEL_PATH}/tests")
+# Target to force re-including cpio binaries
+add_custom_target(
+    user-clean-incbin
+    COMMAND
+        [ -d ${_user_build_dir} ]
+        && find ${_user_build_dir} -type f -name "incbin_*.S.*" | xargs rm -f
+        || true)
 
-include_directories(".")
-include_directories("${KERNEL_PATH}")
+# Main targets for user stuffs
+chcore_add_subproject(
+    user
+    SOURCE_DIR ${_user_source_dir}
+    BINARY_DIR ${_user_build_dir}
+    INSTALL_DIR ${_user_install_dir}
+    CMAKE_ARGS
+        ${_common_args}
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TOOLCHAIN_FILE=${_cmake_script_dir}/Toolchains/user.cmake
+    CMAKE_CACHE_ARGS ${_cache_args}
+    DEPENDS libchcore user-clean-incbin
+    BUILD_ALWAYS TRUE)
 
-add_subdirectory("${KERNEL_ARCH_PATH}")
-add_subdirectory("${KERNEL_MM_PATH}")
-add_subdirectory("${KERNEL_PROCESS_PATH}")
-add_subdirectory("${KERNEL_SYSCALL_PATH}")
-add_subdirectory("${KERNEL_EXCEPTION_PATH}")
-add_subdirectory("${KERNEL_SCHED_PATH}")
-add_subdirectory("${KERNEL_IPC_PATH}")
-add_subdirectory("${KERNEL_TESTS_PATH}")
+# Clean target for user stuffs
+add_custom_target(
+    user-clean
+    COMMAND /bin/rm -rf ${_user_build_dir}
+    COMMAND /bin/rm -rf ${_user_install_dir})
 
-set(BINARY_KERNEL_IMG_PATH "CMakeFiles/kernel.img.dir")
-set(init_object
-        "${BINARY_KERNEL_IMG_PATH}/${BOOTLOADER_PATH}/start.S.o
-        ${BINARY_KERNEL_IMG_PATH}/${BOOTLOADER_PATH}/mmu.c.o
-        ${BINARY_KERNEL_IMG_PATH}/${BOOTLOADER_PATH}/tools.S.o
-        ${BINARY_KERNEL_IMG_PATH}/${BOOTLOADER_PATH}/init_c.c.o
-        ${BINARY_KERNEL_IMG_PATH}/${BOOTLOADER_PATH}/uart.c.o"
-    )
+# --- Kernel ---
 
-set(link_script "linker.lds")
-configure_file("./scripts/linker-aarch64.lds.in" "linker.lds.S")
+set(_kernel_source_dir ${CMAKE_CURRENT_SOURCE_DIR}/kernel)
+set(_kernel_build_dir ${_kernel_source_dir}/_build)
+set(_kernel_install_dir ${CMAKE_CURRENT_BINARY_DIR})
 
-set(files "")
-include("${BOOTLOADER_PATH}/config.cmake")
+# Target to force re-including cpio binaries
+add_custom_target(
+    kernel-clean-incbin
+    COMMAND
+        [ -d ${_kernel_build_dir} ]
+        && find ${_kernel_build_dir} -type f -name "incbin_*.S.*" | xargs rm -f
+        || true)
 
-add_executable(kernel.img ${files} 
-    $<TARGET_OBJECTS:${PROJECT_NAME}-arch>
-    $<TARGET_OBJECTS:${PROJECT_NAME}-mm>
-    $<TARGET_OBJECTS:${PROJECT_NAME}-object>
-    $<TARGET_OBJECTS:${PROJECT_NAME}-syscall>
-    $<TARGET_OBJECTS:${PROJECT_NAME}-sched>
-    $<TARGET_OBJECTS:${PROJECT_NAME}-exception>
-    $<TARGET_OBJECTS:${PROJECT_NAME}-ipc>
-    $<TARGET_OBJECTS:${PROJECT_NAME}-tests>
-    ${USER_PATH}/binary_include.S
-)
+# Main targets for kernel
+chcore_add_subproject(
+    kernel
+    SOURCE_DIR ${_kernel_source_dir}
+    BINARY_DIR ${_kernel_build_dir}
+    INSTALL_DIR ${_kernel_install_dir}
+    CMAKE_ARGS
+        ${_common_args}
+        -DCHCORE_USER_INSTALL_DIR=${_user_install_dir} # used by kernel/CMakeLists.txt to incbin cpio files
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TOOLCHAIN_FILE=${_cmake_script_dir}/Toolchains/kernel.cmake
+    CMAKE_CACHE_ARGS ${_cache_args}
+    DEPENDS user kernel-clean-incbin
+    BUILD_ALWAYS TRUE)
 
-set_property(
-    TARGET kernel.img
-    APPEND_STRING
-    PROPERTY
-        LINK_FLAGS
-        "-T ${CMAKE_CURRENT_BINARY_DIR}/${link_script} -e _start"
-)
+# Clean target for kernel
+add_custom_target(
+    kernel-clean
+    COMMAND /bin/rm -rf ${_kernel_build_dir}
+    COMMAND [ -f ${_kernel_install_dir}/install_manifest.txt ] && cat
+            ${_kernel_install_dir}/install_manifest.txt | xargs rm -rf || true)
 
-set_property(
-    TARGET kernel.img
-    APPEND_STRING
-    PROPERTY
-        DEPENDS
-        "${link_script}"
-)
+# --- Clean All ---
 
-add_custom_command(
-    TARGET kernel.img
-    PRE_LINK
-	COMMAND ${CMAKE_C_COMPILER} -E -x c
-	-I${CMAKE_SOURCE_DIR}/${BOOTLOADER_PATH}/include ./linker.lds.S | grep -v "^#" > linker.lds
-)
+add_custom_target(
+    clean-all
+    COMMAND ${CMAKE_COMMAND} --build . --target kernel-clean
+    COMMAND ${CMAKE_COMMAND} --build . --target user-clean
+    COMMAND ${CMAKE_COMMAND} --build . --target libchcore-clean)

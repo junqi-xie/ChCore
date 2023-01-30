@@ -77,3 +77,8 @@
 /* Performance Benchmark */
 #define SYS_perf_start 230
 #define SYS_perf_end   231
+
+/* Semaphore */
+#define SYS_create_sem 250
+#define SYS_wait_sem   251
+#define SYS_signal_sem 252

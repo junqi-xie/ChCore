@@ -24,6 +24,7 @@
 #include <ipc/connection.h>
 #include <irq/timer.h>
 #include <irq/irq.h>
+#include <semaphore/semaphore.h>
 #include <arch/machine/smp.h>
 
 #include "syscall_num.h"
@@ -147,4 +148,9 @@ const void *syscall_table[NR_SYSCALL] = {
         /* Performance Benchmark */
         [SYS_perf_start] = sys_perf_start,
         [SYS_perf_end] = sys_perf_end,
+
+        /* Semaphore */
+        [SYS_create_sem] = sys_create_sem,
+        [SYS_wait_sem] = sys_wait_sem,
+        [SYS_signal_sem] = sys_signal_sem,
 };

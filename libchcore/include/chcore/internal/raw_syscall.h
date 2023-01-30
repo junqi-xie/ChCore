@@ -253,6 +253,22 @@ static inline void __chcore_sys_perf_end(void)
         __chcore_syscall0(__CHCORE_SYS_perf_end);
 }
 
+/* Semaphore */
+static inline s32 __chcore_sys_create_sem(void)
+{
+        return __chcore_syscall0(__CHCORE_SYS_create_sem);
+}
+
+static inline s32 __chcore_sys_wait_sem(u32 sem_cap, bool is_block)
+{
+        return __chcore_syscall2(__CHCORE_SYS_wait_sem, sem_cap, is_block);
+}
+
+static inline s32 __chcore_sys_signal_sem(u32 sem_cap)
+{
+        return __chcore_syscall1(__CHCORE_SYS_signal_sem, sem_cap);
+}
+
 #ifdef __cplusplus
 }
 #endif
